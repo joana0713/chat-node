@@ -5,11 +5,25 @@
 <title>Advanced Chat</title>
 <script src="/socket.io/socket.io.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+.custom-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #ec4899, #8b5cf6);
+  border-radius: 10px;
+}
+.custom-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+</style>
+
 </head>
 
 <body class="bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 h-screen flex">
 
-<!-- LEFT ROOM BAR -->
+<!-- LEFT ROOM -->
 <div class="w-64 bg-white shadow-xl p-4 flex flex-col">
   <h2 class="font-bold text-purple-600 mb-3">Rooms</h2>
 
@@ -45,16 +59,22 @@
 
   <!-- CHAT -->
   <div id="chatContainer"
-    class="flex-1 overflow-y-auto p-6 space-y-4">
+    class="flex-1 overflow-y-auto p-6 space-y-4 custom-scroll">
   </div>
 
   <!-- INPUT -->
-  <div class="bg-white p-4 flex gap-2 items-center">
+  <div class="bg-white p-4 flex gap-2 items-center relative">
+
     <input type="file" id="imageInput" class="hidden" accept="image/*"/>
 
     <button onclick="document.getElementById('imageInput').click()"
       class="bg-yellow-400 px-3 py-2 rounded">
       📷
+    </button>
+
+    <button onclick="toggleEmoji()"
+      class="bg-pink-400 px-3 py-2 rounded text-white">
+      😊
     </button>
 
     <input id="messageInput"
@@ -65,15 +85,33 @@
       class="bg-blue-600 text-white px-6 py-2 rounded-lg">
       Send
     </button>
+
+    <!-- EMOJI PANEL -->
+    <div id="emojiPanel"
+      class="absolute bottom-16 left-24 bg-white shadow-xl rounded-xl p-4 hidden w-64">
+
+      <div class="grid grid-cols-6 gap-2 text-xl">
+      </div>
+
+      <div class="mt-3 text-xs text-gray-500 text-center">
+        Click emoji to add to message
+      </div>
+    </div>
+
   </div>
 
 </div>
 
 <!-- RIGHT HISTORY -->
 <div id="historyBar"
-  class="w-72 bg-white shadow-xl p-4 hidden flex-col">
-  <h2 class="font-bold text-pink-600 mb-3">History</h2>
-  <div id="historyList" class="space-y-2 overflow-y-auto flex-1"></div>
+  class="w-80 backdrop-blur-xl bg-white/70 border-l border-white/40 
+         shadow-2xl p-6 hidden flex-col transition-all duration-300">
+
+  <h2 class="text-xl font-bold text-pink-600 mb-4">💬 History</h2>
+
+  <div id="historyList"
+       class="space-y-3 overflow-y-auto flex-1 custom-scroll">
+  </div>
 </div>
 
 <script>
@@ -82,20 +120,21 @@ let currentRoom = "";
 let currentUser = "";
 let historyMessages = [];
 
-// ROOM CREATE
+const emojis = ["😀","😂","😍","🔥","👍","🥳","😭","😎","😡","🤯","❤️","👏","🎉","💯"];
+
+/* ROOM */
 function createRoom() {
   const room = document.getElementById("roomInput").value.trim();
   if (!room) return;
   socket.emit("createRoom", room);
 }
 
-// ROOM LIST UPDATE
 socket.on("roomList", (rooms) => {
   const list = document.getElementById("roomList");
   list.innerHTML = "";
   rooms.forEach(r => {
     const div = document.createElement("div");
-    div.className = "p-2 bg-purple-100 rounded cursor-pointer";
+    div.className = "p-2 bg-purple-100 rounded cursor-pointer hover:bg-purple-200";
     div.innerText = r;
     div.onclick = () => {
       currentRoom = r;
@@ -105,7 +144,7 @@ socket.on("roomList", (rooms) => {
   });
 });
 
-// JOIN ROOM
+/* JOIN */
 function joinRoom() {
   const nickname = document.getElementById("nickname").value.trim();
   if (!nickname || !currentRoom) {
@@ -117,66 +156,65 @@ function joinRoom() {
   socket.emit("joinRoom", { room: currentRoom, nickname });
 }
 
-// LOAD HISTORY
 socket.on("chatHistory", (msgs) => {
   historyMessages = msgs;
   renderAllMessages();
   renderHistory();
 });
 
-// SEND MESSAGE
+/* SEND */
 function sendMessage() {
   const text = document.getElementById("messageInput").value.trim();
-  const imageFile = document.getElementById("imageInput").files[0];
+  if (!text) return;
 
-  if (!text && !imageFile) return;
-
-  if (imageFile) {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      socket.emit("chatMessage", { text, image: e.target.result });
-    };
-    reader.readAsDataURL(imageFile);
-    document.getElementById("imageInput").value = "";
-  } else {
-    socket.emit("chatMessage", { text });
-  }
-
+  socket.emit("chatMessage", { text });
   document.getElementById("messageInput").value = "";
 }
 
-// RECEIVE MESSAGE
+/* IMAGE AUTO SEND */
+document.getElementById("imageInput").addEventListener("change", function () {
+  const file = this.files[0];
+  if (!file || !currentRoom) return;
+
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    socket.emit("chatMessage", {
+      text: "",
+      image: e.target.result
+    });
+  };
+  reader.readAsDataURL(file);
+  this.value = "";
+});
+
+/* RECEIVE */
 socket.on("chatMessage", (msg) => {
   historyMessages.push(msg);
   renderMessage(msg);
   renderHistory();
 });
 
-// DELETE MESSAGE
 socket.on("messageDeleted", (id) => {
   historyMessages = historyMessages.filter(m => m.id !== id);
   renderAllMessages();
   renderHistory();
 });
 
-// RENDER ALL
+/* RENDER */
 function renderAllMessages() {
   const container = document.getElementById("chatContainer");
   container.innerHTML = "";
   historyMessages.forEach(m => renderMessage(m));
 }
 
-// RENDER ONE
 function renderMessage(msg) {
   const container = document.getElementById("chatContainer");
 
-  // SYSTEM MESSAGE
   if (msg.system) {
     const sys = document.createElement("div");
     sys.className = "text-center text-gray-500 text-sm italic";
     sys.innerText = msg.text;
     container.appendChild(sys);
-    container.scrollTop = container.scrollHeight;
     return;
   }
 
@@ -195,7 +233,7 @@ function renderMessage(msg) {
         ${isMe ? "bg-blue-500 text-white rounded-br-none"
                : "bg-white rounded-bl-none"}">
 
-        ${msg.text || ""}
+        ${msg.text}
         ${msg.image ? `<img src="${msg.image}" class="mt-2 rounded-lg max-w-xs"/>` : ""}
       </div>
 
@@ -216,7 +254,26 @@ function deleteMessage(id) {
   socket.emit("deleteMessage", id);
 }
 
-// HISTORY PANEL
+/* EMOJI */
+function toggleEmoji() {
+  const panel = document.getElementById("emojiPanel");
+  panel.classList.toggle("hidden");
+
+  const grid = panel.querySelector("div");
+  if (grid.innerHTML === "") {
+    emojis.forEach(e => {
+      const span = document.createElement("span");
+      span.innerText = e;
+      span.className = "cursor-pointer hover:scale-125 transition";
+      span.onclick = () => {
+        document.getElementById("messageInput").value += e;
+      };
+      grid.appendChild(span);
+    });
+  }
+}
+
+/* HISTORY */
 function toggleHistory() {
   document.getElementById("historyBar").classList.toggle("hidden");
 }
@@ -227,7 +284,7 @@ function renderHistory() {
 
   historyMessages.forEach((m, index) => {
     const div = document.createElement("div");
-    div.className = "p-2 bg-pink-100 rounded text-sm cursor-pointer";
+    div.className = "bg-pink-200 rounded-xl p-3 cursor-pointer hover:scale-105 transition";
     div.innerText = m.text || "📷 Image";
     div.onclick = () => {
       document.getElementById("chatContainer")

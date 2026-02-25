@@ -24,7 +24,6 @@ io.on("connection", (socket) => {
 
     socket.emit("chatHistory", rooms[room] || []);
 
-    // ✅ JOIN SYSTEM MESSAGE
     io.to(room).emit("chatMessage", {
       id: uuidv4(),
       user: "System",
@@ -51,7 +50,6 @@ io.on("connection", (socket) => {
 
   socket.on("deleteMessage", (id) => {
     if (!socket.room) return;
-
     rooms[socket.room] = rooms[socket.room].filter(m => m.id !== id);
     io.to(socket.room).emit("messageDeleted", id);
   });
