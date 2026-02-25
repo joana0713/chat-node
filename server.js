@@ -10,46 +10,52 @@ const io = new Server(server);
 app.use(express.static(path.join(__dirname, "public")));
 
 let rooms = {};
+let userRooms = {};
 
 io.on("connection", (socket) => {
 
   socket.on("joinRoom", ({ username, room }) => {
     socket.join(room);
     socket.username = username;
-    socket.room = room;
+    userRooms[socket.id] = room;
 
     if (!rooms[room]) rooms[room] = [];
 
-    io.to(room).emit("systemMessage", `${username} joined`);
+    // 기존 메시지 보내기
+    socket.emit("roomMessages", rooms[room]);
+
+    // 방 목록 업데이트
+    io.emit("updateRoomList", Object.keys(rooms));
   });
 
-  socket.on("sendMessage", (message) => {
+  socket.on("sendMessage", (data) => {
+    const room = userRooms[socket.id];
+    if (!room) return;
+
     const msgObj = {
       id: Date.now(),
       user: socket.username,
-      text: message,
-      time: new Date().toLocaleTimeString(),
-      read: false
+      text: data.text || null,
+      image: data.image || null,
+      time: new Date().toLocaleTimeString()
     };
 
-    rooms[socket.room].push(msgObj);
-    io.to(socket.room).emit("receiveMessage", msgObj);
+    rooms[room].push(msgObj);
+    io.to(room).emit("receiveMessage", msgObj);
   });
 
   socket.on("deleteMessage", (id) => {
-    rooms[socket.room] = rooms[socket.room].filter(m => m.id !== id);
-    io.to(socket.room).emit("messageDeleted", id);
-  });
+    const room = userRooms[socket.id];
+    if (!room) return;
 
-  socket.on("messageRead", (id) => {
-    io.to(socket.room).emit("messageReadUpdate", id);
+    rooms[room] = rooms[room].filter(m => m.id !== id);
+    io.to(room).emit("messageDeleted", id);
   });
 
   socket.on("disconnect", () => {
-    if (socket.room) {
-      io.to(socket.room).emit("systemMessage", `${socket.username} left`);
-    }
+    delete userRooms[socket.id];
   });
+
 });
 
 server.listen(5001, () => {
