@@ -23,7 +23,7 @@
   <div id="roomList" class="space-y-2 overflow-y-auto flex-1"></div>
 </div>
 
-<!-- MAIN CHAT -->
+<!-- MAIN -->
 <div class="flex-1 flex flex-col">
 
   <!-- HEADER -->
@@ -43,7 +43,7 @@
     </button>
   </div>
 
-  <!-- CHAT AREA -->
+  <!-- CHAT -->
   <div id="chatContainer"
     class="flex-1 overflow-y-auto p-6 space-y-4">
   </div>
@@ -82,12 +82,14 @@ let currentRoom = "";
 let currentUser = "";
 let historyMessages = [];
 
+// ROOM CREATE
 function createRoom() {
   const room = document.getElementById("roomInput").value.trim();
   if (!room) return;
   socket.emit("createRoom", room);
 }
 
+// ROOM LIST UPDATE
 socket.on("roomList", (rooms) => {
   const list = document.getElementById("roomList");
   list.innerHTML = "";
@@ -103,20 +105,26 @@ socket.on("roomList", (rooms) => {
   });
 });
 
+// JOIN ROOM
 function joinRoom() {
   const nickname = document.getElementById("nickname").value.trim();
-  if (!nickname || !currentRoom) return alert("Enter nickname & select room");
+  if (!nickname || !currentRoom) {
+    alert("Enter nickname & select room");
+    return;
+  }
 
   currentUser = nickname;
   socket.emit("joinRoom", { room: currentRoom, nickname });
 }
 
+// LOAD HISTORY
 socket.on("chatHistory", (msgs) => {
   historyMessages = msgs;
   renderAllMessages();
   renderHistory();
 });
 
+// SEND MESSAGE
 function sendMessage() {
   const text = document.getElementById("messageInput").value.trim();
   const imageFile = document.getElementById("imageInput").files[0];
@@ -137,28 +145,42 @@ function sendMessage() {
   document.getElementById("messageInput").value = "";
 }
 
+// RECEIVE MESSAGE
 socket.on("chatMessage", (msg) => {
   historyMessages.push(msg);
   renderMessage(msg);
   renderHistory();
 });
 
+// DELETE MESSAGE
 socket.on("messageDeleted", (id) => {
   historyMessages = historyMessages.filter(m => m.id !== id);
   renderAllMessages();
   renderHistory();
 });
 
+// RENDER ALL
 function renderAllMessages() {
   const container = document.getElementById("chatContainer");
   container.innerHTML = "";
   historyMessages.forEach(m => renderMessage(m));
 }
 
+// RENDER ONE
 function renderMessage(msg) {
   const container = document.getElementById("chatContainer");
-  const isMe = msg.user === currentUser;
 
+  // SYSTEM MESSAGE
+  if (msg.system) {
+    const sys = document.createElement("div");
+    sys.className = "text-center text-gray-500 text-sm italic";
+    sys.innerText = msg.text;
+    container.appendChild(sys);
+    container.scrollTop = container.scrollHeight;
+    return;
+  }
+
+  const isMe = msg.user === currentUser;
   const div = document.createElement("div");
   div.className = `flex gap-2 items-end ${isMe ? "justify-end" : ""}`;
 
@@ -194,22 +216,22 @@ function deleteMessage(id) {
   socket.emit("deleteMessage", id);
 }
 
+// HISTORY PANEL
 function toggleHistory() {
-  const bar = document.getElementById("historyBar");
-  bar.classList.toggle("hidden");
+  document.getElementById("historyBar").classList.toggle("hidden");
 }
 
 function renderHistory() {
   const list = document.getElementById("historyList");
   list.innerHTML = "";
 
-  historyMessages.forEach(m => {
+  historyMessages.forEach((m, index) => {
     const div = document.createElement("div");
     div.className = "p-2 bg-pink-100 rounded text-sm cursor-pointer";
     div.innerText = m.text || "📷 Image";
     div.onclick = () => {
       document.getElementById("chatContainer")
-        .children[[...historyMessages].indexOf(m)]
+        .children[index]
         .scrollIntoView({ behavior: "smooth" });
     };
     list.appendChild(div);

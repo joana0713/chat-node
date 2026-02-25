@@ -1,63 +1,75 @@
 const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
-
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
+const http = require("http").createServer(app);
+const io = require("socket.io")(http);
+const { v4: uuidv4 } = require("uuid");
 
 app.use(express.static("public"));
 
-let rooms = {
-  general: [],
-  dev: [],
-  random: []
-};
+let rooms = {};
 
 io.on("connection", (socket) => {
 
-  socket.emit("roomList", Object.keys(rooms));
-
-  socket.on("joinRoom", (room) => {
-    socket.join(room);
-    socket.currentRoom = room;
-
-    if (!rooms[room]) rooms[room] = [];
-
-    socket.emit("previousMessages", rooms[room]);
+  socket.on("createRoom", (room) => {
+    if (!rooms[room]) {
+      rooms[room] = [];
+      io.emit("roomList", Object.keys(rooms));
+    }
   });
 
-  socket.on("chatMessage", ({ text, image }) => {
-    const room = socket.currentRoom;
-    if (!room) return;
+  socket.on("joinRoom", ({ room, nickname }) => {
+    socket.join(room);
+    socket.room = room;
+    socket.nickname = nickname;
 
-    const msgObj = {
-      id: Date.now().toString(),
-      text: text || "",
-      image: image || null
+    socket.emit("chatHistory", rooms[room] || []);
+
+    // ✅ JOIN SYSTEM MESSAGE
+    io.to(room).emit("chatMessage", {
+      id: uuidv4(),
+      user: "System",
+      text: `${nickname} joined the room`,
+      system: true,
+      time: new Date().toLocaleTimeString()
+    });
+  });
+
+  socket.on("chatMessage", (msg) => {
+    if (!socket.room) return;
+
+    const message = {
+      id: uuidv4(),
+      user: socket.nickname,
+      text: msg.text || "",
+      image: msg.image || null,
+      time: new Date().toLocaleTimeString()
     };
 
-    rooms[room].push(msgObj);
-    io.to(room).emit("message", msgObj);
+    rooms[socket.room].push(message);
+    io.to(socket.room).emit("chatMessage", message);
   });
 
   socket.on("deleteMessage", (id) => {
-    const room = socket.currentRoom;
-    if (!room) return;
+    if (!socket.room) return;
 
-    rooms[room] = rooms[room].filter(m => m.id !== id);
-    io.to(room).emit("messageDeleted", id);
+    rooms[socket.room] = rooms[socket.room].filter(m => m.id !== id);
+    io.to(socket.room).emit("messageDeleted", id);
   });
 
-  socket.on("createRoom", (roomName) => {
-    if (!rooms[roomName]) {
-      rooms[roomName] = [];
-      io.emit("roomList", Object.keys(rooms));
+  socket.on("disconnect", () => {
+    if (socket.room && socket.nickname) {
+      io.to(socket.room).emit("chatMessage", {
+        id: uuidv4(),
+        user: "System",
+        text: `${socket.nickname} left the room`,
+        system: true,
+        time: new Date().toLocaleTimeString()
+      });
     }
   });
 
 });
 
-server.listen(3000, () => {
-  console.log("Server running on 3000");
+http.listen(3000, () => {
+  console.log("Server running on http://localhost:3000");
 });
