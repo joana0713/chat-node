@@ -1,49 +1,183 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Advanced Chat</title>
+  <title>Modern Chat</title>
   <style>
-    body { margin:0; font-family:Arial; display:flex; height:100vh; }
-    #main { flex:1; display:flex; flex-direction:column; }
-    #messages { flex:1; padding:10px; overflow-y:auto; }
-    .msg { padding:6px; margin-bottom:5px; border-bottom:1px solid #eee; }
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      height: 100vh;
+      background: #0f172a;
+      color: white;
+    }
+
+    #main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 🔥 TOP BAR */
+    #topBar {
+      padding: 15px 20px;
+      background: linear-gradient(90deg, #6366f1, #8b5cf6);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    #topBar button {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      padding: 6px 12px;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    #topBar button:hover {
+      background: rgba(255,255,255,0.35);
+    }
+
+    /* 🔥 MESSAGES */
+    #messages {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .msg {
+      max-width: 60%;
+      padding: 12px 16px;
+      border-radius: 18px;
+      background: #1e293b;
+      position: relative;
+      animation: fadeIn 0.2s ease-in;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .msg:hover {
+      background: #334155;
+    }
+
+    .actions {
+      margin-top: 5px;
+      font-size: 12px;
+      opacity: 0.7;
+    }
+
     .actions span {
-      cursor:pointer;
-      font-size:12px;
-      margin-left:8px;
-      color:blue;
+      cursor: pointer;
+      margin-right: 10px;
+      transition: 0.2s;
     }
-    #inputArea { display:flex; padding:10px; border-top:1px solid #ddd; }
-    #messageInput { flex:1; padding:8px; }
-    #sendBtn { padding:8px 12px; font-size:12px; }
 
+    .actions span:hover {
+      color: #a78bfa;
+    }
+
+    /* 🔥 INPUT */
+    #inputArea {
+      display: flex;
+      padding: 15px;
+      background: #1e293b;
+      gap: 10px;
+    }
+
+    #messageInput {
+      flex: 1;
+      padding: 12px;
+      border-radius: 12px;
+      border: none;
+      background: #334155;
+      color: white;
+      outline: none;
+    }
+
+    #messageInput::placeholder {
+      color: #94a3b8;
+    }
+
+    #sendBtn {
+      padding: 10px 18px;
+      border-radius: 12px;
+      border: none;
+      background: #6366f1;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    #sendBtn:hover {
+      background: #8b5cf6;
+    }
+
+    /* 🔥 HISTORY BAR */
     #historyBar {
-      width:0;
-      background:#f4f4f4;
-      overflow-y:auto;
-      transition:0.3s;
-      border-left:1px solid #ccc;
+      width: 0;
+      background: #111827;
+      overflow-y: auto;
+      transition: 0.3s ease;
+      border-left: 1px solid #1f2937;
     }
-    #historyBar.open { width:250px; }
 
-    #historyBar h3 { padding:10px; margin:0; background:#ddd; }
-    #historyPanel { padding:10px; }
+    #historyBar.open {
+      width: 280px;
+    }
+
+    #historyBar h3 {
+      padding: 15px;
+      margin: 0;
+      background: #1f2937;
+      font-size: 14px;
+      letter-spacing: 1px;
+    }
+
+    #historyPanel {
+      padding: 15px;
+    }
 
     .history-item {
-      cursor:pointer;
-      font-size:12px;
-      margin-bottom:6px;
+      font-size: 13px;
+      padding: 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.2s;
+      color: #cbd5e1;
     }
 
-    #topBar {
-      padding:10px;
-      background:#222;
-      color:white;
-      display:flex;
-      justify-content:space-between;
+    .history-item:hover {
+      background: #374151;
+      color: white;
     }
 
-    button { cursor:pointer; }
+    /* 🔥 Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 10px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
   </style>
 </head>
 <body>
@@ -51,24 +185,24 @@
 <div id="main">
 
   <div id="topBar">
-    <div>Room Chat</div>
+    <div>⚡ Real-Time Chat</div>
     <div>
       <button onclick="toggleHistory()">History</button>
-      <button onclick="clearHistory()">Clear History UI</button>
+      <button onclick="clearHistory()">Clear UI</button>
     </div>
   </div>
 
   <div id="messages"></div>
 
   <div id="inputArea">
-    <input id="messageInput" placeholder="Type message..." />
+    <input id="messageInput" placeholder="Type your message..." />
     <button id="sendBtn" onclick="sendMessage()">Send</button>
   </div>
 
 </div>
 
 <div id="historyBar">
-  <h3>History</h3>
+  <h3>CHAT HISTORY</h3>
   <div id="historyPanel"></div>
 </div>
 
@@ -93,7 +227,6 @@
     const input = document.getElementById("messageInput");
     const message = input.value.trim();
     if (!message) return;
-
     socket.emit("chatMessage", { room, message });
     input.value = "";
   }
@@ -104,11 +237,11 @@
     div.id = "msg-" + msgObj.id;
 
     div.innerHTML = `
-      <span class="text">${msgObj.text}</span>
-      <span class="actions">
+      <div class="text">${msgObj.text}</div>
+      <div class="actions">
         <span onclick="editMessage('${msgObj.id}')">Edit</span>
         <span onclick="deleteMessage('${msgObj.id}')">Delete</span>
-      </span>
+      </div>
     `;
 
     messagesDiv.appendChild(div);
@@ -156,21 +289,13 @@
     const msgDiv = document.getElementById("msg-" + msgObj.id);
     const historyDiv = document.getElementById("history-" + msgObj.id);
 
-    if (msgDiv) {
-      msgDiv.querySelector(".text").innerText = msgObj.text;
-    }
-
-    if (historyDiv) {
-      historyDiv.innerText = msgObj.text;
-    }
+    if (msgDiv) msgDiv.querySelector(".text").innerText = msgObj.text;
+    if (historyDiv) historyDiv.innerText = msgObj.text;
   });
 
   socket.on("messageDeleted", (id) => {
-    const msgDiv = document.getElementById("msg-" + id);
-    const historyDiv = document.getElementById("history-" + id);
-
-    if (msgDiv) msgDiv.remove();
-    if (historyDiv) historyDiv.remove();
+    document.getElementById("msg-" + id)?.remove();
+    document.getElementById("history-" + id)?.remove();
   });
 </script>
 
