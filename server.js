@@ -1,57 +1,57 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+const io = new Server(server);
 
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, "public")));
 
-let users = {}; // socket.id → { username, room }
+let rooms = {};
 
-io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+io.on("connection", (socket) => {
 
-  socket.on('joinRoom', ({ username, room }) => {
+  socket.on("joinRoom", ({ username, room }) => {
     socket.join(room);
+    socket.username = username;
+    socket.room = room;
 
-    users[socket.id] = { username, room };
+    if (!rooms[room]) rooms[room] = [];
 
-    // 방에만 join 메시지
-    socket.to(room).emit('chat message', `${username} joined ${room}`);
-
-    // 방에 있는 유저 리스트 보내기
-    const roomUsers = Object.values(users)
-      .filter(user => user.room === room)
-      .map(user => user.username);
-
-    io.to(room).emit('userList', roomUsers);
+    io.to(room).emit("systemMessage", `${username} joined`);
   });
 
-  socket.on('chat message', (msg) => {
-    const user = users[socket.id];
-    if (user) {
-      io.to(user.room).emit('chat message', `${user.username}: ${msg}`);
-    }
+  socket.on("sendMessage", (message) => {
+    const msgObj = {
+      id: Date.now(),
+      user: socket.username,
+      text: message,
+      time: new Date().toLocaleTimeString(),
+      read: false
+    };
+
+    rooms[socket.room].push(msgObj);
+    io.to(socket.room).emit("receiveMessage", msgObj);
   });
 
-  socket.on('disconnect', () => {
-    const user = users[socket.id];
-    if (user) {
-      io.to(user.room).emit('chat message', `${user.username} left the room`);
+  socket.on("deleteMessage", (id) => {
+    rooms[socket.room] = rooms[socket.room].filter(m => m.id !== id);
+    io.to(socket.room).emit("messageDeleted", id);
+  });
 
-      delete users[socket.id];
+  socket.on("messageRead", (id) => {
+    io.to(socket.room).emit("messageReadUpdate", id);
+  });
 
-      const roomUsers = Object.values(users)
-        .filter(u => u.room === user.room)
-        .map(u => u.username);
-
-      io.to(user.room).emit('userList', roomUsers);
+  socket.on("disconnect", () => {
+    if (socket.room) {
+      io.to(socket.room).emit("systemMessage", `${socket.username} left`);
     }
   });
 });
 
 server.listen(5001, () => {
-  console.log('🚀 Server running on http://localhost:5001');
+  console.log("Server running on http://localhost:5001");
 });

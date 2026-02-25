@@ -1,80 +1,154 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Real-Time Chat App</title>
-  <style>
-    body { font-family: Arial; margin: 20px; background: #f0f2f5; }
-    #messages { list-style: none; margin: 0; padding: 20px; background: white; height: 400px; overflow-y: scroll; border-radius: 10px; margin-bottom: 20px; }
-    #messages li { padding: 10px; margin-bottom: 10px; background: #e3f2fd; border-radius: 5px; }
-    #form { display: flex; gap: 10px; }
-    #input { flex: 1; padding: 15px; border: 1px solid #ddd; border-radius: 25px; font-size: 16px; }
-    #form button { padding: 15px 25px; background: #25D366; color: white; border: none; border-radius: 25px; cursor: pointer; }
-    #username-form { text-align: center; margin-bottom: 20px; }
-    #username-input { padding: 15px; width: 300px; border: 1px solid #ddd; border-radius: 25px; font-size: 16px; }
-    .online { color: #25D366; font-weight: bold; margin-top: 20px; }
-  </style>
-</head>
-<body>
-  <div id="username-form">
-    <input id="username-input" placeholder="Username..." maxlength="20">
-    <input id="room-input" placeholder="Room name..." maxlength="20">
-    <button onclick="joinChat()">Join Room</button>
-  </div>
-  
-  <ul id="messages"></ul>
-  <div id="online-users" class="online">Online: 0 users</div>
-  
-  <form id="form">
-    <input id="input" placeholder="Type a message..." disabled />
-    <button type="submit" disabled>Send</button>
-  </form>
-
+  <title>Modern Chat</title>
   <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
-    let username = '';
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
 
-    function joinChat() {
-      const username = document.getElementById('username-input').value.trim();
-      const room = document.getElementById('room-input').value.trim();
+<body class="bg-gray-100 flex items-center justify-center h-screen">
 
-      if (username && room) {
-        socket.emit('joinRoom', { username, room });
+<div class="w-[900px] h-[650px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden">
 
-        document.getElementById('username-form').style.display = 'none';
-        document.getElementById('input').disabled = false;
-        document.querySelector('#form button').disabled = false;
-      }
-    }
+  <!-- Header -->
+  <div class="bg-blue-600 text-white p-4 text-xl font-semibold">
+    💬 Realtime Chat Room
+  </div>
 
-    const form = document.getElementById('form');
-    const input = document.getElementById('input');
-    const messages = document.getElementById('messages');
-    const onlineUsers = document.getElementById('online-users');
+  <!-- Join Section -->
+  <div id="joinSection" class="flex gap-2 p-4 border-b">
+    <input id="username" placeholder="Your name"
+      class="flex-1 border p-2 rounded-lg"/>
+    <input id="room" placeholder="Room name"
+      class="flex-1 border p-2 rounded-lg"/>
+    <button onclick="joinRoom()"
+      class="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700">
+      Join
+    </button>
+  </div>
 
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      if (input.value.trim()) {
-        socket.emit('chat message', input.value.trim());
-        input.value = '';
-      }
-    });
+  <!-- Messages -->
+  <div id="messages"
+    class="flex-1 p-6 overflow-y-auto space-y-4 bg-gray-50">
+  </div>
 
-    socket.on('chat message', (msg) => {
-      const item = document.createElement('li');
-      item.textContent = msg;
-      messages.appendChild(item);
-      messages.scrollTop = messages.scrollHeight;
-    });
+  <!-- Input -->
+  <div class="p-4 border-t flex gap-2">
+    <input id="messageInput"
+      class="flex-1 border p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
+      placeholder="Type a message..."
+      onkeydown="if(event.key==='Enter') sendMessage()" />
+    <button onclick="sendMessage()"
+      class="bg-blue-600 text-white px-6 rounded-xl hover:bg-blue-700">
+      Send
+    </button>
+  </div>
 
-    socket.on('userList', (userList) => {
-      onlineUsers.textContent = `Online: ${userList.length} users`;
-    });
+</div>
 
-    // Enter key to join
-    document.getElementById('username-input').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') joinChat();
-    });
-  </script>
+<script>
+const socket = io();
+let currentUser = "";
+let currentRoom = "";
+
+function joinRoom() {
+  const username = document.getElementById("username").value;
+  const room = document.getElementById("room").value;
+
+  if (!username || !room) {
+    alert("Enter username and room");
+    return;
+  }
+
+  currentUser = username;
+  currentRoom = room;
+
+  socket.emit("joinRoom", { username, room });
+  document.getElementById("joinSection").style.display = "none";
+}
+
+function sendMessage() {
+  const input = document.getElementById("messageInput");
+  const message = input.value;
+
+  if (!message) return;
+
+  socket.emit("sendMessage", message);
+  input.value = "";
+}
+
+socket.on("receiveMessage", (data) => {
+  const messages = document.getElementById("messages");
+
+  const isMine = data.user === currentUser;
+
+  const wrapper = document.createElement("div");
+  wrapper.id = "msg-" + data.id;
+  wrapper.className = `flex items-end gap-2 ${isMine ? "justify-end" : ""}`;
+
+  wrapper.innerHTML = `
+    ${!isMine ? `
+      <div class="w-10 h-10 rounded-full bg-blue-400 text-white flex items-center justify-center font-bold">
+        ${data.user.charAt(0).toUpperCase()}
+      </div>` : ""}
+
+    <div class="max-w-[60%]">
+      <div class="${isMine ? 
+        "bg-blue-600 text-white" : 
+        "bg-white border"} 
+        p-3 rounded-2xl shadow-md transition transform hover:scale-[1.02]">
+
+        <div class="text-sm">${data.text}</div>
+        
+        <div class="text-xs mt-1 opacity-70 flex justify-between items-center">
+          <span>${data.time}</span>
+          ${isMine ? `
+            <span id="read-${data.id}" class="ml-2">
+              ✔
+            </span>
+            <button onclick="deleteMessage(${data.id})"
+              class="ml-2 text-red-400 hover:text-red-600 text-sm">
+              🗑
+            </button>
+          ` : ""}
+        </div>
+      </div>
+    </div>
+
+    ${isMine ? `
+      <div class="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center font-bold">
+        ${data.user.charAt(0).toUpperCase()}
+      </div>` : ""}
+  `;
+
+  messages.appendChild(wrapper);
+  messages.scrollTop = messages.scrollHeight;
+
+  if (!isMine) {
+    socket.emit("messageRead", data.id);
+  }
+});
+
+socket.on("messageDeleted", (id) => {
+  const msg = document.getElementById("msg-" + id);
+  if (msg) msg.remove();
+});
+
+socket.on("messageReadUpdate", (id) => {
+  const el = document.getElementById("read-" + id);
+  if (el) el.innerText = "✔✔";
+});
+
+socket.on("systemMessage", (msg) => {
+  const messages = document.getElementById("messages");
+
+  const div = document.createElement("div");
+  div.className = "text-center text-sm text-gray-400";
+  div.innerText = msg;
+
+  messages.appendChild(div);
+});
+</script>
+
 </body>
 </html>
