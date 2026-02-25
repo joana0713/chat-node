@@ -16,8 +16,9 @@
 </head>
 <body>
   <div id="username-form">
-    <input id="username-input" placeholder="Enter your username..." maxlength="20">
-    <button onclick="joinChat()">Join Chat</button>
+    <input id="username-input" placeholder="Username..." maxlength="20">
+    <input id="room-input" placeholder="Room name..." maxlength="20">
+    <button onclick="joinChat()">Join Room</button>
   </div>
   
   <ul id="messages"></ul>
@@ -34,12 +35,15 @@
     let username = '';
 
     function joinChat() {
-      username = document.getElementById('username-input').value.trim();
-      if (username) {
-        socket.emit('join', username);
+      const username = document.getElementById('username-input').value.trim();
+      const room = document.getElementById('room-input').value.trim();
+
+      if (username && room) {
+        socket.emit('joinRoom', { username, room });
+
         document.getElementById('username-form').style.display = 'none';
         document.getElementById('input').disabled = false;
-        document.getElementById('form').querySelector('button').disabled = false;
+        document.querySelector('#form button').disabled = false;
       }
     }
 
