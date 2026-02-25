@@ -1,208 +1,177 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Modern Chat</title>
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>Advanced Chat</title>
+  <style>
+    body { margin:0; font-family:Arial; display:flex; height:100vh; }
+    #main { flex:1; display:flex; flex-direction:column; }
+    #messages { flex:1; padding:10px; overflow-y:auto; }
+    .msg { padding:6px; margin-bottom:5px; border-bottom:1px solid #eee; }
+    .actions span {
+      cursor:pointer;
+      font-size:12px;
+      margin-left:8px;
+      color:blue;
+    }
+    #inputArea { display:flex; padding:10px; border-top:1px solid #ddd; }
+    #messageInput { flex:1; padding:8px; }
+    #sendBtn { padding:8px 12px; font-size:12px; }
+
+    #historyBar {
+      width:0;
+      background:#f4f4f4;
+      overflow-y:auto;
+      transition:0.3s;
+      border-left:1px solid #ccc;
+    }
+    #historyBar.open { width:250px; }
+
+    #historyBar h3 { padding:10px; margin:0; background:#ddd; }
+    #historyPanel { padding:10px; }
+
+    .history-item {
+      cursor:pointer;
+      font-size:12px;
+      margin-bottom:6px;
+    }
+
+    #topBar {
+      padding:10px;
+      background:#222;
+      color:white;
+      display:flex;
+      justify-content:space-between;
+    }
+
+    button { cursor:pointer; }
+  </style>
 </head>
+<body>
 
-<body class="bg-gray-100 flex items-center justify-center h-screen">
+<div id="main">
 
-<div class="w-[1300px] h-[720px] bg-white rounded-2xl shadow-2xl flex overflow-hidden relative">
-
-  <!-- LEFT -->
-  <div class="w-1/5 bg-gray-900 text-white flex flex-col">
-    <div class="p-4 font-bold border-b border-gray-700">💬 Rooms</div>
-    <div id="roomList" class="flex-1 overflow-y-auto"></div>
+  <div id="topBar">
+    <div>Room Chat</div>
+    <div>
+      <button onclick="toggleHistory()">History</button>
+      <button onclick="clearHistory()">Clear History UI</button>
+    </div>
   </div>
 
-  <!-- CENTER -->
-  <div class="flex-1 flex flex-col">
+  <div id="messages"></div>
 
-    <div class="bg-blue-600 text-white p-4 flex justify-between items-center">
-      <span class="text-xl font-semibold">Realtime Chat</span>
-      <button onclick="toggleHistory()"
-        class="bg-white text-blue-600 px-4 py-2 rounded-lg font-semibold">
-        History
-      </button>
-    </div>
-
-    <div id="joinSection" class="flex gap-2 p-4 border-b">
-      <input id="username" placeholder="Your name"
-        class="flex-1 border p-2 rounded-lg"/>
-      <input id="room" placeholder="Room name"
-        class="flex-1 border p-2 rounded-lg"/>
-      <button onclick="joinRoom()"
-        class="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold">
-        Join
-      </button>
-    </div>
-
-    <div id="messages"
-      class="flex-1 p-6 overflow-y-auto space-y-4 bg-gray-50">
-    </div>
-
-    <div class="p-4 border-t flex gap-3 items-center">
-      <input type="file" id="imageInput" class="hidden" onchange="sendImage()" />
-      <button onclick="document.getElementById('imageInput').click()"
-        class="text-2xl">📷</button>
-
-      <input id="messageInput"
-        class="flex-1 border p-3 rounded-xl"
-        placeholder="Type message..."
-        onkeydown="if(event.key==='Enter') sendMessage()" />
-
-      <button onclick="sendMessage()"
-        class="bg-blue-600 text-white px-8 py-3 rounded-xl font-semibold text-lg">
-        Send
-      </button>
-    </div>
-
-  </div>
-
-  <!-- RIGHT HISTORY PANEL -->
-  <div id="historyPanelWrapper"
-    class="w-0 bg-gray-100 border-l flex flex-col transition-all duration-300 overflow-hidden">
-
-    <div class="p-4 flex justify-between items-center border-b">
-      <span class="font-bold">📜 Chat History</span>
-      <button onclick="clearHistory()"
-        class="text-red-500 font-semibold">
-        Clear
-      </button>
-    </div>
-
-    <div id="historyPanel"
-      class="flex-1 overflow-y-auto p-4 text-sm space-y-2">
-    </div>
-
+  <div id="inputArea">
+    <input id="messageInput" placeholder="Type message..." />
+    <button id="sendBtn" onclick="sendMessage()">Send</button>
   </div>
 
 </div>
 
+<div id="historyBar">
+  <h3>History</h3>
+  <div id="historyPanel"></div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
 <script>
-const socket = io();
-let currentUser = "";
-let currentRoom = "";
-let historyOpen = false;
+  const socket = io();
+  const room = "global";
+  socket.emit("joinRoom", room);
 
-function toggleHistory() {
-  const panel = document.getElementById("historyPanelWrapper");
-  historyOpen = !historyOpen;
+  const messagesDiv = document.getElementById("messages");
+  const historyPanel = document.getElementById("historyPanel");
 
-  panel.style.width = historyOpen ? "300px" : "0px";
-}
+  function toggleHistory() {
+    document.getElementById("historyBar").classList.toggle("open");
+  }
 
-function joinRoom() {
-  const username = document.getElementById("username").value;
-  const room = document.getElementById("room").value;
-  if (!username || !room) return alert("Fill all");
+  function clearHistory() {
+    historyPanel.innerHTML = "";
+  }
 
-  currentUser = username;
-  currentRoom = room;
+  function sendMessage() {
+    const input = document.getElementById("messageInput");
+    const message = input.value.trim();
+    if (!message) return;
 
-  socket.emit("joinRoom", { username, room });
-  document.getElementById("joinSection").style.display = "none";
-}
+    socket.emit("chatMessage", { room, message });
+    input.value = "";
+  }
 
-function sendMessage() {
-  const input = document.getElementById("messageInput");
-  if (!input.value) return;
-
-  socket.emit("sendMessage", { text: input.value });
-  input.value = "";
-}
-
-function sendImage() {
-  const file = document.getElementById("imageInput").files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = e => {
-    socket.emit("sendMessage", { image: e.target.result });
-  };
-  reader.readAsDataURL(file);
-
-  document.getElementById("imageInput").value = "";
-}
-
-function renderMessage(data) {
-  const messages = document.getElementById("messages");
-  const isMine = data.user === currentUser;
-
-  const wrapper = document.createElement("div");
-  wrapper.id = "msg-" + data.id;
-  wrapper.className = `flex ${isMine ? "justify-end" : ""}`;
-
-  wrapper.innerHTML = `
-    <div class="${isMine ? "bg-blue-600 text-white" : "bg-white border"} 
-      p-3 rounded-2xl shadow-md max-w-[60%]">
-
-      ${data.text ? `<div>${data.text}</div>` : ""}
-      ${data.image ? `<img src="${data.image}" class="mt-2 rounded-lg max-h-60"/>` : ""}
-
-      <div class="text-xs mt-1 opacity-70 flex justify-between">
-        <span>${data.user} • ${data.time}</span>
-        ${isMine ? `
-          <button onclick="deleteMessage(${data.id})"
-            class="text-red-400 hover:text-red-600">
-            🗑
-          </button>` : ""}
-      </div>
-    </div>
-  `;
-
-  messages.appendChild(wrapper);
-  messages.scrollTop = messages.scrollHeight;
-}
-
-function deleteMessage(id) {
-  socket.emit("deleteMessage", id);
-}
-
-function clearHistory() {
-  socket.emit("clearHistory");
-}
-
-socket.on("receiveMessage", renderMessage);
-
-socket.on("messageDeleted", id => {
-  const el = document.getElementById("msg-" + id);
-  if (el) el.remove();
-});
-
-socket.on("roomMessages", msgs => {
-  document.getElementById("messages").innerHTML = "";
-  msgs.forEach(renderMessage);
-});
-
-socket.on("updateRoomList", rooms => {
-  const list = document.getElementById("roomList");
-  list.innerHTML = "";
-  rooms.forEach(r => {
+  function addMessageToUI(msgObj) {
     const div = document.createElement("div");
-    div.className = "p-3 hover:bg-gray-700 cursor-pointer";
-    div.innerText = r;
-    div.onclick = () => document.getElementById("room").value = r;
-    list.appendChild(div);
-  });
-});
+    div.className = "msg";
+    div.id = "msg-" + msgObj.id;
 
-socket.on("updateHistory", msgs => {
-  const panel = document.getElementById("historyPanel");
-  panel.innerHTML = "";
-  msgs.forEach(m => {
+    div.innerHTML = `
+      <span class="text">${msgObj.text}</span>
+      <span class="actions">
+        <span onclick="editMessage('${msgObj.id}')">Edit</span>
+        <span onclick="deleteMessage('${msgObj.id}')">Delete</span>
+      </span>
+    `;
+
+    messagesDiv.appendChild(div);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+
+  function addToHistory(msgObj) {
     const div = document.createElement("div");
-    div.className = "border-b pb-1";
-    div.innerText = `${m.user}: ${m.text ? m.text : "📷 Image"} (${m.time})`;
-    panel.appendChild(div);
-  });
-});
+    div.className = "history-item";
+    div.id = "history-" + msgObj.id;
+    div.innerText = msgObj.text;
 
-socket.on("historyCleared", () => {
-  document.getElementById("messages").innerHTML = "";
-  document.getElementById("historyPanel").innerHTML = "";
-});
+    div.onclick = () => {
+      document.getElementById("msg-" + msgObj.id)
+        ?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    historyPanel.appendChild(div);
+  }
+
+  function editMessage(id) {
+    const newText = prompt("Edit message:");
+    if (!newText) return;
+    socket.emit("editMessage", { room, id, newText });
+  }
+
+  function deleteMessage(id) {
+    if (!confirm("Delete this message?")) return;
+    socket.emit("deleteMessage", { room, id });
+  }
+
+  socket.on("previousMessages", (msgs) => {
+    msgs.forEach(msg => {
+      addMessageToUI(msg);
+      addToHistory(msg);
+    });
+  });
+
+  socket.on("message", (msgObj) => {
+    addMessageToUI(msgObj);
+    addToHistory(msgObj);
+  });
+
+  socket.on("messageEdited", (msgObj) => {
+    const msgDiv = document.getElementById("msg-" + msgObj.id);
+    const historyDiv = document.getElementById("history-" + msgObj.id);
+
+    if (msgDiv) {
+      msgDiv.querySelector(".text").innerText = msgObj.text;
+    }
+
+    if (historyDiv) {
+      historyDiv.innerText = msgObj.text;
+    }
+  });
+
+  socket.on("messageDeleted", (id) => {
+    const msgDiv = document.getElementById("msg-" + id);
+    const historyDiv = document.getElementById("history-" + id);
+
+    if (msgDiv) msgDiv.remove();
+    if (historyDiv) historyDiv.remove();
+  });
 </script>
 
 </body>

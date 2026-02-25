@@ -1,72 +1,51 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
-const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static("public"));
 
 let rooms = {};
-let userRooms = {};
 
 io.on("connection", (socket) => {
 
-  socket.on("joinRoom", ({ username, room }) => {
+  socket.on("joinRoom", (room) => {
     socket.join(room);
-    socket.username = username;
-    userRooms[socket.id] = room;
-
     if (!rooms[room]) rooms[room] = [];
-
-    socket.emit("roomMessages", rooms[room]);
-    io.emit("updateRoomList", Object.keys(rooms));
+    socket.emit("previousMessages", rooms[room]);
   });
 
-  socket.on("sendMessage", (data) => {
-    const room = userRooms[socket.id];
-    if (!room) return;
-
+  socket.on("chatMessage", ({ room, message }) => {
     const msgObj = {
-      id: Date.now(),
-      user: socket.username,
-      text: data.text || null,
-      image: data.image || null,
-      time: new Date().toLocaleTimeString()
+      id: Date.now().toString(),
+      text: message
     };
 
     rooms[room].push(msgObj);
-
-    io.to(room).emit("receiveMessage", msgObj);
-    io.to(room).emit("updateHistory", rooms[room]);
+    io.to(room).emit("message", msgObj);
   });
 
-  socket.on("deleteMessage", (id) => {
-    const room = userRooms[socket.id];
-    if (!room) return;
+  socket.on("editMessage", ({ room, id, newText }) => {
+    const msg = rooms[room].find(m => m.id === id);
+    if (msg) {
+      msg.text = newText;
+      io.to(room).emit("messageEdited", msg);
+    }
+  });
+
+  // 🔥 DELETE
+  socket.on("deleteMessage", ({ room, id }) => {
+    if (!rooms[room]) return;
 
     rooms[room] = rooms[room].filter(m => m.id !== id);
-
     io.to(room).emit("messageDeleted", id);
-    io.to(room).emit("updateHistory", rooms[room]);
-  });
-
-  socket.on("clearHistory", () => {
-    const room = userRooms[socket.id];
-    if (!room) return;
-
-    rooms[room] = [];
-    io.to(room).emit("historyCleared");
-  });
-
-  socket.on("disconnect", () => {
-    delete userRooms[socket.id];
   });
 
 });
 
-server.listen(5001, () => {
-  console.log("Server running on http://localhost:5001");
-}); 
+server.listen(3000, () => {
+  console.log("Server running on port 3000");
+});
