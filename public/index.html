@@ -1,302 +1,220 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Modern Chat</title>
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      display: flex;
-      height: 100vh;
-      background: #0f172a;
-      color: white;
-    }
-
-    #main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* 🔥 TOP BAR */
-    #topBar {
-      padding: 15px 20px;
-      background: linear-gradient(90deg, #6366f1, #8b5cf6);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-weight: bold;
-      letter-spacing: 1px;
-    }
-
-    #topBar button {
-      background: rgba(255,255,255,0.2);
-      border: none;
-      padding: 6px 12px;
-      color: white;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-
-    #topBar button:hover {
-      background: rgba(255,255,255,0.35);
-    }
-
-    /* 🔥 MESSAGES */
-    #messages {
-      flex: 1;
-      padding: 20px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .msg {
-      max-width: 60%;
-      padding: 12px 16px;
-      border-radius: 18px;
-      background: #1e293b;
-      position: relative;
-      animation: fadeIn 0.2s ease-in;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    }
-
-    .msg:hover {
-      background: #334155;
-    }
-
-    .actions {
-      margin-top: 5px;
-      font-size: 12px;
-      opacity: 0.7;
-    }
-
-    .actions span {
-      cursor: pointer;
-      margin-right: 10px;
-      transition: 0.2s;
-    }
-
-    .actions span:hover {
-      color: #a78bfa;
-    }
-
-    /* 🔥 INPUT */
-    #inputArea {
-      display: flex;
-      padding: 15px;
-      background: #1e293b;
-      gap: 10px;
-    }
-
-    #messageInput {
-      flex: 1;
-      padding: 12px;
-      border-radius: 12px;
-      border: none;
-      background: #334155;
-      color: white;
-      outline: none;
-    }
-
-    #messageInput::placeholder {
-      color: #94a3b8;
-    }
-
-    #sendBtn {
-      padding: 10px 18px;
-      border-radius: 12px;
-      border: none;
-      background: #6366f1;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-
-    #sendBtn:hover {
-      background: #8b5cf6;
-    }
-
-    /* 🔥 HISTORY BAR */
-    #historyBar {
-      width: 0;
-      background: #111827;
-      overflow-y: auto;
-      transition: 0.3s ease;
-      border-left: 1px solid #1f2937;
-    }
-
-    #historyBar.open {
-      width: 280px;
-    }
-
-    #historyBar h3 {
-      padding: 15px;
-      margin: 0;
-      background: #1f2937;
-      font-size: 14px;
-      letter-spacing: 1px;
-    }
-
-    #historyPanel {
-      padding: 15px;
-    }
-
-    .history-item {
-      font-size: 13px;
-      padding: 8px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: 0.2s;
-      color: #cbd5e1;
-    }
-
-    .history-item:hover {
-      background: #374151;
-      color: white;
-    }
-
-    /* 🔥 Scrollbar */
-    ::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: #475569;
-      border-radius: 10px;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(5px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-  </style>
-</head>
-<body>
-
-<div id="main">
-
-  <div id="topBar">
-    <div>⚡ Real-Time Chat</div>
-    <div>
-      <button onclick="toggleHistory()">History</button>
-      <button onclick="clearHistory()">Clear UI</button>
-    </div>
-  </div>
-
-  <div id="messages"></div>
-
-  <div id="inputArea">
-    <input id="messageInput" placeholder="Type your message..." />
-    <button id="sendBtn" onclick="sendMessage()">Send</button>
-  </div>
-
-</div>
-
-<div id="historyBar">
-  <h3>CHAT HISTORY</h3>
-  <div id="historyPanel"></div>
-</div>
-
+<meta charset="UTF-8" />
+<title>Advanced Chat</title>
 <script src="/socket.io/socket.io.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 h-screen flex">
+
+<!-- LEFT ROOM BAR -->
+<div class="w-64 bg-white shadow-xl p-4 flex flex-col">
+  <h2 class="font-bold text-purple-600 mb-3">Rooms</h2>
+
+  <div class="flex gap-2 mb-3">
+    <input id="roomInput" placeholder="Room name"
+      class="border px-2 py-1 rounded w-full"/>
+    <button onclick="createRoom()"
+      class="bg-purple-500 text-white px-3 rounded">+</button>
+  </div>
+
+  <div id="roomList" class="space-y-2 overflow-y-auto flex-1"></div>
+</div>
+
+<!-- MAIN CHAT -->
+<div class="flex-1 flex flex-col">
+
+  <!-- HEADER -->
+  <div class="bg-white shadow-md p-4 flex justify-between items-center">
+    <div>
+      <input id="nickname" placeholder="Nickname"
+        class="border rounded px-2 py-1"/>
+      <button onclick="joinRoom()"
+        class="bg-blue-500 text-white px-4 py-1 rounded ml-2">
+        Join
+      </button>
+    </div>
+
+    <button onclick="toggleHistory()"
+      class="bg-pink-500 text-white px-4 py-1 rounded">
+      History
+    </button>
+  </div>
+
+  <!-- CHAT AREA -->
+  <div id="chatContainer"
+    class="flex-1 overflow-y-auto p-6 space-y-4">
+  </div>
+
+  <!-- INPUT -->
+  <div class="bg-white p-4 flex gap-2 items-center">
+    <input type="file" id="imageInput" class="hidden" accept="image/*"/>
+
+    <button onclick="document.getElementById('imageInput').click()"
+      class="bg-yellow-400 px-3 py-2 rounded">
+      📷
+    </button>
+
+    <input id="messageInput"
+      class="flex-1 border rounded px-4 py-2"
+      placeholder="Message..." />
+
+    <button onclick="sendMessage()"
+      class="bg-blue-600 text-white px-6 py-2 rounded-lg">
+      Send
+    </button>
+  </div>
+
+</div>
+
+<!-- RIGHT HISTORY -->
+<div id="historyBar"
+  class="w-72 bg-white shadow-xl p-4 hidden flex-col">
+  <h2 class="font-bold text-pink-600 mb-3">History</h2>
+  <div id="historyList" class="space-y-2 overflow-y-auto flex-1"></div>
+</div>
+
 <script>
-  const socket = io();
-  const room = "global";
-  socket.emit("joinRoom", room);
+const socket = io();
+let currentRoom = "";
+let currentUser = "";
+let historyMessages = [];
 
-  const messagesDiv = document.getElementById("messages");
-  const historyPanel = document.getElementById("historyPanel");
+function createRoom() {
+  const room = document.getElementById("roomInput").value.trim();
+  if (!room) return;
+  socket.emit("createRoom", room);
+}
 
-  function toggleHistory() {
-    document.getElementById("historyBar").classList.toggle("open");
-  }
-
-  function clearHistory() {
-    historyPanel.innerHTML = "";
-  }
-
-  function sendMessage() {
-    const input = document.getElementById("messageInput");
-    const message = input.value.trim();
-    if (!message) return;
-    socket.emit("chatMessage", { room, message });
-    input.value = "";
-  }
-
-  function addMessageToUI(msgObj) {
+socket.on("roomList", (rooms) => {
+  const list = document.getElementById("roomList");
+  list.innerHTML = "";
+  rooms.forEach(r => {
     const div = document.createElement("div");
-    div.className = "msg";
-    div.id = "msg-" + msgObj.id;
-
-    div.innerHTML = `
-      <div class="text">${msgObj.text}</div>
-      <div class="actions">
-        <span onclick="editMessage('${msgObj.id}')">Edit</span>
-        <span onclick="deleteMessage('${msgObj.id}')">Delete</span>
-      </div>
-    `;
-
-    messagesDiv.appendChild(div);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-  }
-
-  function addToHistory(msgObj) {
-    const div = document.createElement("div");
-    div.className = "history-item";
-    div.id = "history-" + msgObj.id;
-    div.innerText = msgObj.text;
-
+    div.className = "p-2 bg-purple-100 rounded cursor-pointer";
+    div.innerText = r;
     div.onclick = () => {
-      document.getElementById("msg-" + msgObj.id)
-        ?.scrollIntoView({ behavior: "smooth" });
+      currentRoom = r;
+      joinRoom();
     };
+    list.appendChild(div);
+  });
+});
 
-    historyPanel.appendChild(div);
+function joinRoom() {
+  const nickname = document.getElementById("nickname").value.trim();
+  if (!nickname || !currentRoom) return alert("Enter nickname & select room");
+
+  currentUser = nickname;
+  socket.emit("joinRoom", { room: currentRoom, nickname });
+}
+
+socket.on("chatHistory", (msgs) => {
+  historyMessages = msgs;
+  renderAllMessages();
+  renderHistory();
+});
+
+function sendMessage() {
+  const text = document.getElementById("messageInput").value.trim();
+  const imageFile = document.getElementById("imageInput").files[0];
+
+  if (!text && !imageFile) return;
+
+  if (imageFile) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      socket.emit("chatMessage", { text, image: e.target.result });
+    };
+    reader.readAsDataURL(imageFile);
+    document.getElementById("imageInput").value = "";
+  } else {
+    socket.emit("chatMessage", { text });
   }
 
-  function editMessage(id) {
-    const newText = prompt("Edit message:");
-    if (!newText) return;
-    socket.emit("editMessage", { room, id, newText });
-  }
+  document.getElementById("messageInput").value = "";
+}
 
-  function deleteMessage(id) {
-    if (!confirm("Delete this message?")) return;
-    socket.emit("deleteMessage", { room, id });
-  }
+socket.on("chatMessage", (msg) => {
+  historyMessages.push(msg);
+  renderMessage(msg);
+  renderHistory();
+});
 
-  socket.on("previousMessages", (msgs) => {
-    msgs.forEach(msg => {
-      addMessageToUI(msg);
-      addToHistory(msg);
-    });
+socket.on("messageDeleted", (id) => {
+  historyMessages = historyMessages.filter(m => m.id !== id);
+  renderAllMessages();
+  renderHistory();
+});
+
+function renderAllMessages() {
+  const container = document.getElementById("chatContainer");
+  container.innerHTML = "";
+  historyMessages.forEach(m => renderMessage(m));
+}
+
+function renderMessage(msg) {
+  const container = document.getElementById("chatContainer");
+  const isMe = msg.user === currentUser;
+
+  const div = document.createElement("div");
+  div.className = `flex gap-2 items-end ${isMe ? "justify-end" : ""}`;
+
+  div.innerHTML = `
+    ${!isMe ? `<img src="https://ui-avatars.com/api/?name=${msg.user}"
+      class="w-10 h-10 rounded-full"/>` : ""}
+
+    <div>
+      <div class="text-xs ${isMe ? "text-right" : ""}">${msg.user}</div>
+
+      <div class="px-4 py-2 rounded-2xl shadow
+        ${isMe ? "bg-blue-500 text-white rounded-br-none"
+               : "bg-white rounded-bl-none"}">
+
+        ${msg.text || ""}
+        ${msg.image ? `<img src="${msg.image}" class="mt-2 rounded-lg max-w-xs"/>` : ""}
+      </div>
+
+      <div class="text-[10px] text-gray-400 ${isMe ? "text-right" : ""}">
+        ${msg.time}
+      </div>
+    </div>
+
+    ${isMe ? `<button onclick="deleteMessage('${msg.id}')"
+      class="text-red-500 text-xs">🗑</button>` : ""}
+  `;
+
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function deleteMessage(id) {
+  socket.emit("deleteMessage", id);
+}
+
+function toggleHistory() {
+  const bar = document.getElementById("historyBar");
+  bar.classList.toggle("hidden");
+}
+
+function renderHistory() {
+  const list = document.getElementById("historyList");
+  list.innerHTML = "";
+
+  historyMessages.forEach(m => {
+    const div = document.createElement("div");
+    div.className = "p-2 bg-pink-100 rounded text-sm cursor-pointer";
+    div.innerText = m.text || "📷 Image";
+    div.onclick = () => {
+      document.getElementById("chatContainer")
+        .children[[...historyMessages].indexOf(m)]
+        .scrollIntoView({ behavior: "smooth" });
+    };
+    list.appendChild(div);
   });
-
-  socket.on("message", (msgObj) => {
-    addMessageToUI(msgObj);
-    addToHistory(msgObj);
-  });
-
-  socket.on("messageEdited", (msgObj) => {
-    const msgDiv = document.getElementById("msg-" + msgObj.id);
-    const historyDiv = document.getElementById("history-" + msgObj.id);
-
-    if (msgDiv) msgDiv.querySelector(".text").innerText = msgObj.text;
-    if (historyDiv) historyDiv.innerText = msgObj.text;
-  });
-
-  socket.on("messageDeleted", (id) => {
-    document.getElementById("msg-" + id)?.remove();
-    document.getElementById("history-" + id)?.remove();
-  });
+}
 </script>
 
 </body>
