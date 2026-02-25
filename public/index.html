@@ -8,48 +8,44 @@
 
 <body class="bg-gray-100 flex items-center justify-center h-screen">
 
-<div class="w-[1100px] h-[700px] bg-white rounded-2xl shadow-2xl flex overflow-hidden">
+<div class="w-[1300px] h-[720px] bg-white rounded-2xl shadow-2xl flex overflow-hidden relative">
 
-  <!-- Sidebar -->
-  <div class="w-1/4 bg-gray-900 text-white flex flex-col">
-    <div class="p-4 text-lg font-bold border-b border-gray-700">
-      💬 Rooms
-    </div>
+  <!-- LEFT -->
+  <div class="w-1/5 bg-gray-900 text-white flex flex-col">
+    <div class="p-4 font-bold border-b border-gray-700">💬 Rooms</div>
     <div id="roomList" class="flex-1 overflow-y-auto"></div>
   </div>
 
-  <!-- Chat Area -->
+  <!-- CENTER -->
   <div class="flex-1 flex flex-col">
 
-    <!-- Header -->
-    <div class="bg-blue-600 text-white p-4 text-xl font-semibold">
-      Realtime Chat
+    <div class="bg-blue-600 text-white p-4 flex justify-between items-center">
+      <span class="text-xl font-semibold">Realtime Chat</span>
+      <button onclick="toggleHistory()"
+        class="bg-white text-blue-600 px-4 py-2 rounded-lg font-semibold">
+        History
+      </button>
     </div>
 
-    <!-- Join -->
     <div id="joinSection" class="flex gap-2 p-4 border-b">
       <input id="username" placeholder="Your name"
         class="flex-1 border p-2 rounded-lg"/>
       <input id="room" placeholder="Room name"
         class="flex-1 border p-2 rounded-lg"/>
       <button onclick="joinRoom()"
-        class="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700">
+        class="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold">
         Join
       </button>
     </div>
 
-    <!-- Messages -->
     <div id="messages"
       class="flex-1 p-6 overflow-y-auto space-y-4 bg-gray-50">
     </div>
 
-    <!-- Input -->
-    <div class="p-4 border-t flex gap-2 items-center">
+    <div class="p-4 border-t flex gap-3 items-center">
       <input type="file" id="imageInput" class="hidden" onchange="sendImage()" />
       <button onclick="document.getElementById('imageInput').click()"
-        class="text-2xl hover:scale-110 transition">
-        📷
-      </button>
+        class="text-2xl">📷</button>
 
       <input id="messageInput"
         class="flex-1 border p-3 rounded-xl"
@@ -57,24 +53,50 @@
         onkeydown="if(event.key==='Enter') sendMessage()" />
 
       <button onclick="sendMessage()"
-        class="bg-blue-600 text-white px-6 rounded-xl hover:bg-blue-700">
+        class="bg-blue-600 text-white px-8 py-3 rounded-xl font-semibold text-lg">
         Send
       </button>
     </div>
 
   </div>
+
+  <!-- RIGHT HISTORY PANEL -->
+  <div id="historyPanelWrapper"
+    class="w-0 bg-gray-100 border-l flex flex-col transition-all duration-300 overflow-hidden">
+
+    <div class="p-4 flex justify-between items-center border-b">
+      <span class="font-bold">📜 Chat History</span>
+      <button onclick="clearHistory()"
+        class="text-red-500 font-semibold">
+        Clear
+      </button>
+    </div>
+
+    <div id="historyPanel"
+      class="flex-1 overflow-y-auto p-4 text-sm space-y-2">
+    </div>
+
+  </div>
+
 </div>
 
 <script>
 const socket = io();
 let currentUser = "";
 let currentRoom = "";
+let historyOpen = false;
+
+function toggleHistory() {
+  const panel = document.getElementById("historyPanelWrapper");
+  historyOpen = !historyOpen;
+
+  panel.style.width = historyOpen ? "300px" : "0px";
+}
 
 function joinRoom() {
   const username = document.getElementById("username").value;
   const room = document.getElementById("room").value;
-
-  if (!username || !room) return alert("Fill all fields");
+  if (!username || !room) return alert("Fill all");
 
   currentUser = username;
   currentRoom = room;
@@ -87,27 +109,21 @@ function sendMessage() {
   const input = document.getElementById("messageInput");
   if (!input.value) return;
 
-  socket.emit("sendMessage", {
-    text: input.value
-  });
-
+  socket.emit("sendMessage", { text: input.value });
   input.value = "";
 }
 
 function sendImage() {
-  const fileInput = document.getElementById("imageInput");
-  const file = fileInput.files[0];
+  const file = document.getElementById("imageInput").files[0];
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = function(e) {
-    socket.emit("sendMessage", {
-      text: null,
-      image: e.target.result
-    });
+  reader.onload = e => {
+    socket.emit("sendMessage", { image: e.target.result });
   };
   reader.readAsDataURL(file);
-  fileInput.value = "";
+
+  document.getElementById("imageInput").value = "";
 }
 
 function renderMessage(data) {
@@ -116,36 +132,24 @@ function renderMessage(data) {
 
   const wrapper = document.createElement("div");
   wrapper.id = "msg-" + data.id;
-  wrapper.className = `flex items-end gap-2 ${isMine ? "justify-end" : ""}`;
+  wrapper.className = `flex ${isMine ? "justify-end" : ""}`;
 
   wrapper.innerHTML = `
-    ${!isMine ? `
-      <div class="w-10 h-10 rounded-full bg-blue-400 text-white flex items-center justify-center font-bold">
-        ${data.user.charAt(0).toUpperCase()}
-      </div>` : ""}
+    <div class="${isMine ? "bg-blue-600 text-white" : "bg-white border"} 
+      p-3 rounded-2xl shadow-md max-w-[60%]">
 
-    <div class="max-w-[60%]">
-      <div class="${isMine ? "bg-blue-600 text-white" : "bg-white border"} 
-        p-3 rounded-2xl shadow-md">
+      ${data.text ? `<div>${data.text}</div>` : ""}
+      ${data.image ? `<img src="${data.image}" class="mt-2 rounded-lg max-h-60"/>` : ""}
 
-        ${data.text ? `<div>${data.text}</div>` : ""}
-        ${data.image ? `<img src="${data.image}" class="mt-2 rounded-lg max-h-60 cursor-pointer"/>` : ""}
-
-        <div class="text-xs mt-1 opacity-70 flex justify-between">
-          <span>${data.time}</span>
-          ${isMine ? `
-            <button onclick="deleteMessage(${data.id})"
-              class="text-red-400 hover:text-red-600">
-              🗑
-            </button>` : ""}
-        </div>
+      <div class="text-xs mt-1 opacity-70 flex justify-between">
+        <span>${data.user} • ${data.time}</span>
+        ${isMine ? `
+          <button onclick="deleteMessage(${data.id})"
+            class="text-red-400 hover:text-red-600">
+            🗑
+          </button>` : ""}
       </div>
     </div>
-
-    ${isMine ? `
-      <div class="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center font-bold">
-        ${data.user.charAt(0).toUpperCase()}
-      </div>` : ""}
   `;
 
   messages.appendChild(wrapper);
@@ -156,31 +160,48 @@ function deleteMessage(id) {
   socket.emit("deleteMessage", id);
 }
 
+function clearHistory() {
+  socket.emit("clearHistory");
+}
+
 socket.on("receiveMessage", renderMessage);
 
-socket.on("messageDeleted", (id) => {
+socket.on("messageDeleted", id => {
   const el = document.getElementById("msg-" + id);
   if (el) el.remove();
 });
 
-socket.on("roomMessages", (msgs) => {
+socket.on("roomMessages", msgs => {
   document.getElementById("messages").innerHTML = "";
   msgs.forEach(renderMessage);
 });
 
-socket.on("updateRoomList", (rooms) => {
+socket.on("updateRoomList", rooms => {
   const list = document.getElementById("roomList");
   list.innerHTML = "";
-
   rooms.forEach(r => {
     const div = document.createElement("div");
     div.className = "p-3 hover:bg-gray-700 cursor-pointer";
     div.innerText = r;
-    div.onclick = () => {
-      document.getElementById("room").value = r;
-    };
+    div.onclick = () => document.getElementById("room").value = r;
     list.appendChild(div);
   });
+});
+
+socket.on("updateHistory", msgs => {
+  const panel = document.getElementById("historyPanel");
+  panel.innerHTML = "";
+  msgs.forEach(m => {
+    const div = document.createElement("div");
+    div.className = "border-b pb-1";
+    div.innerText = `${m.user}: ${m.text ? m.text : "📷 Image"} (${m.time})`;
+    panel.appendChild(div);
+  });
+});
+
+socket.on("historyCleared", () => {
+  document.getElementById("messages").innerHTML = "";
+  document.getElementById("historyPanel").innerHTML = "";
 });
 </script>
 

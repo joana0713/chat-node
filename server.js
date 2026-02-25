@@ -21,10 +21,7 @@ io.on("connection", (socket) => {
 
     if (!rooms[room]) rooms[room] = [];
 
-    // 기존 메시지 보내기
     socket.emit("roomMessages", rooms[room]);
-
-    // 방 목록 업데이트
     io.emit("updateRoomList", Object.keys(rooms));
   });
 
@@ -41,7 +38,9 @@ io.on("connection", (socket) => {
     };
 
     rooms[room].push(msgObj);
+
     io.to(room).emit("receiveMessage", msgObj);
+    io.to(room).emit("updateHistory", rooms[room]);
   });
 
   socket.on("deleteMessage", (id) => {
@@ -49,7 +48,17 @@ io.on("connection", (socket) => {
     if (!room) return;
 
     rooms[room] = rooms[room].filter(m => m.id !== id);
+
     io.to(room).emit("messageDeleted", id);
+    io.to(room).emit("updateHistory", rooms[room]);
+  });
+
+  socket.on("clearHistory", () => {
+    const room = userRooms[socket.id];
+    if (!room) return;
+
+    rooms[room] = [];
+    io.to(room).emit("historyCleared");
   });
 
   socket.on("disconnect", () => {
@@ -60,4 +69,4 @@ io.on("connection", (socket) => {
 
 server.listen(5001, () => {
   console.log("Server running on http://localhost:5001");
-});
+}); 
