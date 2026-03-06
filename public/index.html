@@ -3,19 +3,33 @@
 <head>
 
 <meta charset="UTF-8">
-
-<title>Chat</title>
+<title>Modern Chat</title>
 
 <script src="/socket.io/socket.io.js"></script>
-
 <script src="https://cdn.tailwindcss.com"></script>
 
-<link rel="stylesheet"
-href="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.css">
-
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.css">
 <script src="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.js"></script>
 
 <style>
+
+body.dark{
+background:#020617;
+color:#e2e8f0;
+}
+
+.chat-dark{
+background:#020617;
+}
+
+.message{
+animation:fade .2s;
+}
+
+@keyframes fade{
+from{opacity:0;transform:translateY(10px)}
+to{opacity:1}
+}
 
 .custom-scroll::-webkit-scrollbar{
 width:6px
@@ -26,34 +40,25 @@ background:#6366f1;
 border-radius:10px
 }
 
-.message{
-animation:fade 0.2s
-}
-
-@keyframes fade{
-from{opacity:0;transform:translateY(10px)}
-to{opacity:1}
-}
-
 </style>
 
 </head>
 
-<body class="bg-gray-100 dark:bg-[#020617] text-gray-800 dark:text-gray-200 h-screen flex">
+<body class="h-screen flex bg-gray-100">
 
-<!-- LEFT PANEL -->
+<!-- ROOM PANEL -->
 
-<div class="w-64 bg-white dark:bg-[#0f172a] border-r border-gray-200 dark:border-gray-800 p-4 flex flex-col">
+<div class="w-64 bg-white border-r p-4 flex flex-col">
 
 <h2 class="font-bold mb-3">Rooms</h2>
 
 <div class="flex gap-2 mb-4">
 
-<input id="roomInput"
-class="border rounded px-2 py-1 w-full dark:bg-gray-800">
+<input id="roomInput" class="border rounded px-2 py-1 w-full">
 
-<button onclick="createRoom()"
-class="bg-purple-600 text-white px-3 rounded">+</button>
+<button onclick="createRoom()" class="bg-purple-600 text-white px-3 rounded">
++
+</button>
 
 </div>
 
@@ -71,13 +76,12 @@ class="bg-purple-600 text-white px-3 rounded">+</button>
 
 <!-- HEADER -->
 
-<div class="bg-white dark:bg-[#020617] border-b border-gray-200 dark:border-gray-800 p-4 flex justify-between">
+<div class="bg-white border-b p-4 flex justify-between">
 
 <div>
 
-<input id="nickname"
-placeholder="Nickname"
-class="border rounded px-2 py-1 dark:bg-gray-800">
+<input id="nickname" placeholder="Nickname"
+class="border rounded px-2 py-1">
 
 <button onclick="joinRoom()"
 class="bg-blue-600 text-white px-4 py-1 rounded ml-2">
@@ -86,33 +90,50 @@ Join
 
 </div>
 
+<div class="flex gap-2">
+
 <button onclick="toggleDark()"
 class="bg-gray-800 text-white px-3 py-1 rounded">
 🌙
 </button>
+
+<button onclick="toggleGif()"
+class="bg-pink-500 text-white px-3 py-1 rounded">
+GIF
+</button>
+
+</div>
 
 </div>
 
 <!-- CHAT -->
 
 <div id="chatContainer"
-class="flex-1 overflow-y-auto p-6 space-y-4 custom-scroll
-bg-white dark:bg-[#020617]"></div>
+class="flex-1 overflow-y-auto p-6 space-y-4 custom-scroll"></div>
+
+<!-- SUGGESTION -->
+
+<div id="suggestions"
+class="px-6 text-sm text-gray-500"></div>
 
 <!-- INPUT -->
 
-<div class="bg-white dark:bg-[#020617] border-t border-gray-200 dark:border-gray-800 p-4 flex gap-2 relative">
+<div class="bg-white border-t p-4 flex gap-2 relative">
 
 <input type="file" id="imageInput" class="hidden">
 
 <button onclick="imageInput.click()"
-class="bg-yellow-400 px-3 py-2 rounded">📷</button>
+class="bg-yellow-400 px-3 py-2 rounded">
+📷
+</button>
 
 <button onclick="toggleEmoji()"
-class="bg-pink-500 text-white px-3 py-2 rounded">😊</button>
+class="bg-pink-500 text-white px-3 py-2 rounded">
+😊
+</button>
 
 <input id="messageInput"
-class="flex-1 border rounded px-4 py-2 dark:bg-gray-800"
+class="flex-1 border rounded px-4 py-2"
 placeholder="Message...">
 
 <button onclick="sendMessage()"
@@ -121,7 +142,21 @@ Send
 </button>
 
 <div id="emojiPanel"
-class="absolute bottom-16 left-20 hidden"></div>
+class="absolute bottom-16 left-10 hidden"></div>
+
+</div>
+
+<!-- GIF SEARCH -->
+
+<div id="gifPanel"
+class="hidden absolute bottom-20 left-72 bg-white p-4 shadow-xl rounded w-96">
+
+<input id="gifSearch"
+placeholder="Search GIF..."
+class="border w-full px-2 py-1 mb-3">
+
+<div id="gifResults"
+class="grid grid-cols-3 gap-2"></div>
 
 </div>
 
@@ -133,13 +168,22 @@ const socket=io()
 
 let currentRoom=""
 let currentUser=""
+
 let historyMessages=[]
+
+/* DARK MODE */
+
+function toggleDark(){
+
+document.body.classList.toggle("dark")
+
+}
 
 /* ROOM */
 
 function createRoom(){
 
-const room=document.getElementById("roomInput").value.trim()
+const room=roomInput.value.trim()
 
 socket.emit("createRoom",room)
 
@@ -147,15 +191,13 @@ socket.emit("createRoom",room)
 
 socket.on("roomList",(rooms)=>{
 
-const list=document.getElementById("roomList")
-
-list.innerHTML=""
+roomList.innerHTML=""
 
 rooms.forEach(r=>{
 
 const div=document.createElement("div")
 
-div.className="p-2 bg-gray-200 dark:bg-gray-700 rounded cursor-pointer"
+div.className="p-2 bg-gray-200 rounded cursor-pointer"
 
 div.innerText=r
 
@@ -166,7 +208,7 @@ joinRoom()
 
 }
 
-list.appendChild(div)
+roomList.appendChild(div)
 
 })
 
@@ -176,12 +218,9 @@ list.appendChild(div)
 
 function joinRoom(){
 
-const nickname=document.getElementById("nickname").value.trim()
+const nickname=nickname.value.trim()
 
-if(!nickname||!currentRoom){
-alert("enter nickname & room")
-return
-}
+if(!nickname||!currentRoom) return
 
 currentUser=nickname
 
@@ -201,9 +240,7 @@ renderAll()
 
 socket.on("userList",(users)=>{
 
-const list=document.getElementById("userList")
-
-list.innerHTML=""
+userList.innerHTML=""
 
 users.forEach(u=>{
 
@@ -211,7 +248,7 @@ const div=document.createElement("div")
 
 div.innerText="🟢 "+u
 
-list.appendChild(div)
+userList.appendChild(div)
 
 })
 
@@ -221,7 +258,7 @@ list.appendChild(div)
 
 function sendMessage(){
 
-const text=document.getElementById("messageInput").value.trim()
+const text=messageInput.value.trim()
 
 if(!text) return
 
@@ -234,12 +271,6 @@ messageInput.value=""
 messageInput.addEventListener("keypress",(e)=>{
 
 if(e.key==="Enter") sendMessage()
-
-})
-
-messageInput.addEventListener("input",()=>{
-
-socket.emit("typing")
 
 })
 
@@ -261,6 +292,50 @@ reader.readAsDataURL(file)
 
 })
 
+/* GIF SEARCH */
+
+function toggleGif(){
+
+gifPanel.classList.toggle("hidden")
+
+}
+
+gifSearch.addEventListener("input",async()=>{
+
+const q=gifSearch.value
+
+if(q.length<2) return
+
+const res=await fetch(
+`https://g.tenor.com/v1/search?q=${q}&key=LIVDSRZULELA&limit=9`
+)
+
+const data=await res.json()
+
+gifResults.innerHTML=""
+
+data.results.forEach(g=>{
+
+const img=document.createElement("img")
+
+img.src=g.media[0].gif.url
+
+img.className="cursor-pointer rounded"
+
+img.onclick=()=>{
+
+socket.emit("chatMessage",{gif:g.media[0].gif.url})
+
+gifPanel.classList.add("hidden")
+
+}
+
+gifResults.appendChild(img)
+
+})
+
+})
+
 /* RECEIVE */
 
 socket.on("chatMessage",(msg)=>{
@@ -268,14 +343,6 @@ socket.on("chatMessage",(msg)=>{
 historyMessages.push(msg)
 
 renderMessage(msg)
-
-})
-
-socket.on("messageDeleted",(id)=>{
-
-historyMessages=historyMessages.filter(m=>m.id!==id)
-
-renderAll()
 
 })
 
@@ -305,47 +372,31 @@ return
 
 }
 
-const isMe=msg.user===currentUser
-
 const div=document.createElement("div")
 
-div.className=`flex ${isMe?"justify-end":""} gap-2 message`
+div.className="message"
 
 div.innerHTML=`
 
-<div>
-
 <div class="text-xs">${msg.user}</div>
 
-<div class="px-4 py-2 rounded-xl shadow
-${isMe?"bg-blue-600 text-white":"bg-gray-200 dark:bg-gray-700"}">
+<div class="bg-gray-200 px-4 py-2 rounded-xl">
 
 ${msg.text||""}
 
-${msg.image?`<img src="${msg.image}" class="mt-2 rounded max-w-xs">`:""}
+${msg.image?`<img src="${msg.image}" class="mt-2 max-w-xs rounded">`:""}
+
+${msg.gif?`<img src="${msg.gif}" class="mt-2 max-w-xs rounded">`:""}
 
 </div>
 
 <div class="text-[10px] text-gray-400">${msg.time}</div>
 
-</div>
-
-${isMe?`<button onclick="deleteMessage('${msg.id}')">🗑</button>`:""}
-
 `
 
 chatContainer.appendChild(div)
 
-chatContainer.scrollTo({
-top:chatContainer.scrollHeight,
-behavior:"smooth"
-})
-
-}
-
-function deleteMessage(id){
-
-socket.emit("deleteMessage",id)
+chatContainer.scrollTop=chatContainer.scrollHeight
 
 }
 
@@ -353,11 +404,9 @@ socket.emit("deleteMessage",id)
 
 function toggleEmoji(){
 
-const panel=document.getElementById("emojiPanel")
+emojiPanel.classList.toggle("hidden")
 
-panel.classList.toggle("hidden")
-
-if(panel.innerHTML===""){
+if(emojiPanel.innerHTML===""){
 
 const picker=new EmojiMart.Picker({
 
@@ -369,19 +418,33 @@ messageInput.value+=emoji.native
 
 })
 
-panel.appendChild(picker)
+emojiPanel.appendChild(picker)
 
 }
 
 }
 
-/* DARK */
+/* MESSAGE SUGGESTIONS */
 
-function toggleDark(){
+const suggestionsList=[
+"Hello 👋",
+"How are you?",
+"Good morning ☀️",
+"Nice to meet you!",
+"Let's start 🚀"
+]
 
-document.documentElement.classList.toggle("dark")
+messageInput.addEventListener("input",()=>{
 
-}
+const text=messageInput.value.toLowerCase()
+
+const match=suggestionsList.filter(s=>s.toLowerCase().includes(text))
+
+suggestions.innerHTML=match.map(m=>
+`<span class="cursor-pointer mr-2">${m}</span>`
+).join("")
+
+})
 
 </script>
 

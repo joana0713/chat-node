@@ -9,7 +9,7 @@ app.use(express.static("public"))
 let rooms = {}
 let users = {}
 
-io.on("connection", (socket) => {
+io.on("connection",(socket)=>{
 
 socket.on("createRoom",(room)=>{
 
@@ -24,13 +24,16 @@ io.emit("roomList",Object.keys(rooms))
 socket.on("joinRoom",({room,nickname})=>{
 
 socket.join(room)
+
 socket.room=room
 socket.nickname=nickname
 
 if(!users[room]) users[room]=[]
+
 users[room].push(nickname)
 
-socket.emit("chatHistory",rooms[room]||[])
+socket.emit("chatHistory",rooms[room])
+
 io.to(room).emit("userList",users[room])
 
 io.to(room).emit("chatMessage",{
@@ -52,6 +55,7 @@ id:uuidv4(),
 user:socket.nickname,
 text:msg.text||"",
 image:msg.image||null,
+gif:msg.gif||null,
 time:new Date().toLocaleTimeString()
 }
 
@@ -62,15 +66,7 @@ io.to(socket.room).emit("chatMessage",message)
 })
 
 socket.on("typing",()=>{
-
 socket.to(socket.room).emit("typing",socket.nickname)
-
-})
-
-socket.on("reaction",({id,emoji})=>{
-
-io.to(socket.room).emit("reaction",{id,emoji})
-
 })
 
 socket.on("deleteMessage",(id)=>{
@@ -105,6 +101,6 @@ time:new Date().toLocaleTimeString()
 
 http.listen(3000,()=>{
 
-console.log("http://localhost:3000")
+console.log("Server running http://localhost:3000")
 
 })
