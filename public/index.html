@@ -1,299 +1,388 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8" />
-<title>Advanced Chat</title>
+
+<meta charset="UTF-8">
+
+<title>Chat</title>
+
 <script src="/socket.io/socket.io.js"></script>
+
 <script src="https://cdn.tailwindcss.com"></script>
 
+<link rel="stylesheet"
+href="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.css">
+
+<script src="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.js"></script>
+
 <style>
-.custom-scroll::-webkit-scrollbar {
-  width: 6px;
+
+.custom-scroll::-webkit-scrollbar{
+width:6px
 }
-.custom-scroll::-webkit-scrollbar-thumb {
-  background: linear-gradient(to bottom, #ec4899, #8b5cf6);
-  border-radius: 10px;
+
+.custom-scroll::-webkit-scrollbar-thumb{
+background:#6366f1;
+border-radius:10px
 }
-.custom-scroll::-webkit-scrollbar-track {
-  background: transparent;
+
+.message{
+animation:fade 0.2s
 }
+
+@keyframes fade{
+from{opacity:0;transform:translateY(10px)}
+to{opacity:1}
+}
+
 </style>
 
 </head>
 
-<body class="bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 h-screen flex">
+<body class="bg-gray-100 dark:bg-[#020617] text-gray-800 dark:text-gray-200 h-screen flex">
 
-<!-- LEFT ROOM -->
-<div class="w-64 bg-white shadow-xl p-4 flex flex-col">
-  <h2 class="font-bold text-purple-600 mb-3">Rooms</h2>
+<!-- LEFT PANEL -->
 
-  <div class="flex gap-2 mb-3">
-    <input id="roomInput" placeholder="Room name"
-      class="border px-2 py-1 rounded w-full"/>
-    <button onclick="createRoom()"
-      class="bg-purple-500 text-white px-3 rounded">+</button>
-  </div>
+<div class="w-64 bg-white dark:bg-[#0f172a] border-r border-gray-200 dark:border-gray-800 p-4 flex flex-col">
 
-  <div id="roomList" class="space-y-2 overflow-y-auto flex-1"></div>
+<h2 class="font-bold mb-3">Rooms</h2>
+
+<div class="flex gap-2 mb-4">
+
+<input id="roomInput"
+class="border rounded px-2 py-1 w-full dark:bg-gray-800">
+
+<button onclick="createRoom()"
+class="bg-purple-600 text-white px-3 rounded">+</button>
+
+</div>
+
+<div id="roomList" class="space-y-2 flex-1"></div>
+
+<h2 class="font-bold mt-4">Users</h2>
+
+<div id="userList" class="text-sm space-y-1"></div>
+
 </div>
 
 <!-- MAIN -->
+
 <div class="flex-1 flex flex-col">
 
-  <!-- HEADER -->
-  <div class="bg-white shadow-md p-4 flex justify-between items-center">
-    <div>
-      <input id="nickname" placeholder="Nickname"
-        class="border rounded px-2 py-1"/>
-      <button onclick="joinRoom()"
-        class="bg-blue-500 text-white px-4 py-1 rounded ml-2">
-        Join
-      </button>
-    </div>
+<!-- HEADER -->
 
-    <button onclick="toggleHistory()"
-      class="bg-pink-500 text-white px-4 py-1 rounded">
-      History
-    </button>
-  </div>
+<div class="bg-white dark:bg-[#020617] border-b border-gray-200 dark:border-gray-800 p-4 flex justify-between">
 
-  <!-- CHAT -->
-  <div id="chatContainer"
-    class="flex-1 overflow-y-auto p-6 space-y-4 custom-scroll">
-  </div>
+<div>
 
-  <!-- INPUT -->
-  <div class="bg-white p-4 flex gap-2 items-center relative">
+<input id="nickname"
+placeholder="Nickname"
+class="border rounded px-2 py-1 dark:bg-gray-800">
 
-    <input type="file" id="imageInput" class="hidden" accept="image/*"/>
-
-    <button onclick="document.getElementById('imageInput').click()"
-      class="bg-yellow-400 px-3 py-2 rounded">
-      📷
-    </button>
-
-    <button onclick="toggleEmoji()"
-      class="bg-pink-400 px-3 py-2 rounded text-white">
-      😊
-    </button>
-
-    <input id="messageInput"
-      class="flex-1 border rounded px-4 py-2"
-      placeholder="Message..." />
-
-    <button onclick="sendMessage()"
-      class="bg-blue-600 text-white px-6 py-2 rounded-lg">
-      Send
-    </button>
-
-    <!-- EMOJI PANEL -->
-    <div id="emojiPanel"
-      class="absolute bottom-16 left-24 bg-white shadow-xl rounded-xl p-4 hidden w-64">
-
-      <div class="grid grid-cols-6 gap-2 text-xl">
-      </div>
-
-      <div class="mt-3 text-xs text-gray-500 text-center">
-        Click emoji to add to message
-      </div>
-    </div>
-
-  </div>
+<button onclick="joinRoom()"
+class="bg-blue-600 text-white px-4 py-1 rounded ml-2">
+Join
+</button>
 
 </div>
 
-<!-- RIGHT HISTORY -->
-<div id="historyBar"
-  class="w-80 backdrop-blur-xl bg-white/70 border-l border-white/40 
-         shadow-2xl p-6 hidden flex-col transition-all duration-300">
+<button onclick="toggleDark()"
+class="bg-gray-800 text-white px-3 py-1 rounded">
+🌙
+</button>
 
-  <h2 class="text-xl font-bold text-pink-600 mb-4">💬 History</h2>
+</div>
 
-  <div id="historyList"
-       class="space-y-3 overflow-y-auto flex-1 custom-scroll">
-  </div>
+<!-- CHAT -->
+
+<div id="chatContainer"
+class="flex-1 overflow-y-auto p-6 space-y-4 custom-scroll
+bg-white dark:bg-[#020617]"></div>
+
+<!-- INPUT -->
+
+<div class="bg-white dark:bg-[#020617] border-t border-gray-200 dark:border-gray-800 p-4 flex gap-2 relative">
+
+<input type="file" id="imageInput" class="hidden">
+
+<button onclick="imageInput.click()"
+class="bg-yellow-400 px-3 py-2 rounded">📷</button>
+
+<button onclick="toggleEmoji()"
+class="bg-pink-500 text-white px-3 py-2 rounded">😊</button>
+
+<input id="messageInput"
+class="flex-1 border rounded px-4 py-2 dark:bg-gray-800"
+placeholder="Message...">
+
+<button onclick="sendMessage()"
+class="bg-blue-600 text-white px-6 py-2 rounded">
+Send
+</button>
+
+<div id="emojiPanel"
+class="absolute bottom-16 left-20 hidden"></div>
+
+</div>
+
 </div>
 
 <script>
-const socket = io();
-let currentRoom = "";
-let currentUser = "";
-let historyMessages = [];
 
-const emojis = ["😀","😂","😍","🔥","👍","🥳","😭","😎","😡","🤯","❤️","👏","🎉","💯"];
+const socket=io()
+
+let currentRoom=""
+let currentUser=""
+let historyMessages=[]
 
 /* ROOM */
-function createRoom() {
-  const room = document.getElementById("roomInput").value.trim();
-  if (!room) return;
-  socket.emit("createRoom", room);
+
+function createRoom(){
+
+const room=document.getElementById("roomInput").value.trim()
+
+socket.emit("createRoom",room)
+
 }
 
-socket.on("roomList", (rooms) => {
-  const list = document.getElementById("roomList");
-  list.innerHTML = "";
-  rooms.forEach(r => {
-    const div = document.createElement("div");
-    div.className = "p-2 bg-purple-100 rounded cursor-pointer hover:bg-purple-200";
-    div.innerText = r;
-    div.onclick = () => {
-      currentRoom = r;
-      joinRoom();
-    };
-    list.appendChild(div);
-  });
-});
+socket.on("roomList",(rooms)=>{
+
+const list=document.getElementById("roomList")
+
+list.innerHTML=""
+
+rooms.forEach(r=>{
+
+const div=document.createElement("div")
+
+div.className="p-2 bg-gray-200 dark:bg-gray-700 rounded cursor-pointer"
+
+div.innerText=r
+
+div.onclick=()=>{
+
+currentRoom=r
+joinRoom()
+
+}
+
+list.appendChild(div)
+
+})
+
+})
 
 /* JOIN */
-function joinRoom() {
-  const nickname = document.getElementById("nickname").value.trim();
-  if (!nickname || !currentRoom) {
-    alert("Enter nickname & select room");
-    return;
-  }
 
-  currentUser = nickname;
-  socket.emit("joinRoom", { room: currentRoom, nickname });
+function joinRoom(){
+
+const nickname=document.getElementById("nickname").value.trim()
+
+if(!nickname||!currentRoom){
+alert("enter nickname & room")
+return
 }
 
-socket.on("chatHistory", (msgs) => {
-  historyMessages = msgs;
-  renderAllMessages();
-  renderHistory();
-});
+currentUser=nickname
+
+socket.emit("joinRoom",{room:currentRoom,nickname})
+
+}
+
+socket.on("chatHistory",(msgs)=>{
+
+historyMessages=msgs
+
+renderAll()
+
+})
+
+/* USERS */
+
+socket.on("userList",(users)=>{
+
+const list=document.getElementById("userList")
+
+list.innerHTML=""
+
+users.forEach(u=>{
+
+const div=document.createElement("div")
+
+div.innerText="🟢 "+u
+
+list.appendChild(div)
+
+})
+
+})
 
 /* SEND */
-function sendMessage() {
-  const text = document.getElementById("messageInput").value.trim();
-  if (!text) return;
 
-  socket.emit("chatMessage", { text });
-  document.getElementById("messageInput").value = "";
+function sendMessage(){
+
+const text=document.getElementById("messageInput").value.trim()
+
+if(!text) return
+
+socket.emit("chatMessage",{text})
+
+messageInput.value=""
+
 }
 
-/* IMAGE AUTO SEND */
-document.getElementById("imageInput").addEventListener("change", function () {
-  const file = this.files[0];
-  if (!file || !currentRoom) return;
+messageInput.addEventListener("keypress",(e)=>{
 
-  const reader = new FileReader();
-  reader.onload = function (e) {
-    socket.emit("chatMessage", {
-      text: "",
-      image: e.target.result
-    });
-  };
-  reader.readAsDataURL(file);
-  this.value = "";
-});
+if(e.key==="Enter") sendMessage()
+
+})
+
+messageInput.addEventListener("input",()=>{
+
+socket.emit("typing")
+
+})
+
+/* IMAGE */
+
+imageInput.addEventListener("change",function(){
+
+const file=this.files[0]
+
+const reader=new FileReader()
+
+reader.onload=(e)=>{
+
+socket.emit("chatMessage",{image:e.target.result})
+
+}
+
+reader.readAsDataURL(file)
+
+})
 
 /* RECEIVE */
-socket.on("chatMessage", (msg) => {
-  historyMessages.push(msg);
-  renderMessage(msg);
-  renderHistory();
-});
 
-socket.on("messageDeleted", (id) => {
-  historyMessages = historyMessages.filter(m => m.id !== id);
-  renderAllMessages();
-  renderHistory();
-});
+socket.on("chatMessage",(msg)=>{
+
+historyMessages.push(msg)
+
+renderMessage(msg)
+
+})
+
+socket.on("messageDeleted",(id)=>{
+
+historyMessages=historyMessages.filter(m=>m.id!==id)
+
+renderAll()
+
+})
 
 /* RENDER */
-function renderAllMessages() {
-  const container = document.getElementById("chatContainer");
-  container.innerHTML = "";
-  historyMessages.forEach(m => renderMessage(m));
+
+function renderAll(){
+
+chatContainer.innerHTML=""
+
+historyMessages.forEach(m=>renderMessage(m))
+
 }
 
-function renderMessage(msg) {
-  const container = document.getElementById("chatContainer");
+function renderMessage(msg){
 
-  if (msg.system) {
-    const sys = document.createElement("div");
-    sys.className = "text-center text-gray-500 text-sm italic";
-    sys.innerText = msg.text;
-    container.appendChild(sys);
-    return;
-  }
+if(msg.system){
 
-  const isMe = msg.user === currentUser;
-  const div = document.createElement("div");
-  div.className = `flex gap-2 items-end ${isMe ? "justify-end" : ""}`;
+const sys=document.createElement("div")
 
-  div.innerHTML = `
-    ${!isMe ? `<img src="https://ui-avatars.com/api/?name=${msg.user}"
-      class="w-10 h-10 rounded-full"/>` : ""}
+sys.className="text-center text-gray-400"
 
-    <div>
-      <div class="text-xs ${isMe ? "text-right" : ""}">${msg.user}</div>
+sys.innerText=msg.text
 
-      <div class="px-4 py-2 rounded-2xl shadow
-        ${isMe ? "bg-blue-500 text-white rounded-br-none"
-               : "bg-white rounded-bl-none"}">
+chatContainer.appendChild(sys)
 
-        ${msg.text}
-        ${msg.image ? `<img src="${msg.image}" class="mt-2 rounded-lg max-w-xs"/>` : ""}
-      </div>
+return
 
-      <div class="text-[10px] text-gray-400 ${isMe ? "text-right" : ""}">
-        ${msg.time}
-      </div>
-    </div>
-
-    ${isMe ? `<button onclick="deleteMessage('${msg.id}')"
-      class="text-red-500 text-xs">🗑</button>` : ""}
-  `;
-
-  container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
 }
 
-function deleteMessage(id) {
-  socket.emit("deleteMessage", id);
+const isMe=msg.user===currentUser
+
+const div=document.createElement("div")
+
+div.className=`flex ${isMe?"justify-end":""} gap-2 message`
+
+div.innerHTML=`
+
+<div>
+
+<div class="text-xs">${msg.user}</div>
+
+<div class="px-4 py-2 rounded-xl shadow
+${isMe?"bg-blue-600 text-white":"bg-gray-200 dark:bg-gray-700"}">
+
+${msg.text||""}
+
+${msg.image?`<img src="${msg.image}" class="mt-2 rounded max-w-xs">`:""}
+
+</div>
+
+<div class="text-[10px] text-gray-400">${msg.time}</div>
+
+</div>
+
+${isMe?`<button onclick="deleteMessage('${msg.id}')">🗑</button>`:""}
+
+`
+
+chatContainer.appendChild(div)
+
+chatContainer.scrollTo({
+top:chatContainer.scrollHeight,
+behavior:"smooth"
+})
+
+}
+
+function deleteMessage(id){
+
+socket.emit("deleteMessage",id)
+
 }
 
 /* EMOJI */
-function toggleEmoji() {
-  const panel = document.getElementById("emojiPanel");
-  panel.classList.toggle("hidden");
 
-  const grid = panel.querySelector("div");
-  if (grid.innerHTML === "") {
-    emojis.forEach(e => {
-      const span = document.createElement("span");
-      span.innerText = e;
-      span.className = "cursor-pointer hover:scale-125 transition";
-      span.onclick = () => {
-        document.getElementById("messageInput").value += e;
-      };
-      grid.appendChild(span);
-    });
-  }
+function toggleEmoji(){
+
+const panel=document.getElementById("emojiPanel")
+
+panel.classList.toggle("hidden")
+
+if(panel.innerHTML===""){
+
+const picker=new EmojiMart.Picker({
+
+onEmojiSelect:(emoji)=>{
+
+messageInput.value+=emoji.native
+
 }
 
-/* HISTORY */
-function toggleHistory() {
-  document.getElementById("historyBar").classList.toggle("hidden");
+})
+
+panel.appendChild(picker)
+
 }
 
-function renderHistory() {
-  const list = document.getElementById("historyList");
-  list.innerHTML = "";
-
-  historyMessages.forEach((m, index) => {
-    const div = document.createElement("div");
-    div.className = "bg-pink-200 rounded-xl p-3 cursor-pointer hover:scale-105 transition";
-    div.innerText = m.text || "📷 Image";
-    div.onclick = () => {
-      document.getElementById("chatContainer")
-        .children[index]
-        .scrollIntoView({ behavior: "smooth" });
-    };
-    list.appendChild(div);
-  });
 }
+
+/* DARK */
+
+function toggleDark(){
+
+document.documentElement.classList.toggle("dark")
+
+}
+
 </script>
 
 </body>
