@@ -1,451 +1,247 @@
 <!DOCTYPE html>
 <html>
 <head>
-
 <meta charset="UTF-8">
-<title>Modern Chat</title>
+<title>Chat</title>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
-
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.css">
 <script src="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.js"></script>
 
 <style>
+.custom-scroll::-webkit-scrollbar{width:6px}
+.custom-scroll::-webkit-scrollbar-thumb{background:#6366f1;border-radius:10px}
+.message{animation:fade 0.2s}
+@keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1}}
 
-body.dark{
-background:#020617;
-color:#e2e8f0;
+/* PANEL */
+#panelContainer{
+    position:absolute;
+    bottom:60px; left:20px;
+    width:300px;
+    max-height:300px;
+    background:white;
+    border-radius:8px;
+    overflow-y:auto;
+    display:none;
+    z-index:50;
+    box-shadow:0 8px 20px rgba(0,0,0,0.3);
 }
+#panelContainer::-webkit-scrollbar {display: none;}
+#panelContainer {-ms-overflow-style: none; scrollbar-width: none;}
 
-.chat-dark{
-background:#020617;
-}
+#panelTabs{display:flex; border-bottom:1px solid #ccc;}
+#panelTabs button{flex:1; padding:5px; cursor:pointer; background:white; border:none; font-weight:bold;}
+#panelTabs button.active{background:#f0f0f0;}
 
-.message{
-animation:fade .2s;
-}
-
-@keyframes fade{
-from{opacity:0;transform:translateY(10px)}
-to{opacity:1}
-}
-
-.custom-scroll::-webkit-scrollbar{
-width:6px
-}
-
-.custom-scroll::-webkit-scrollbar-thumb{
-background:#6366f1;
-border-radius:10px
-}
-
+#emojiPanel, #gifPanel{padding:5px; display:none; flex-wrap:wrap; gap:5px;}
+#gifPanel img{width:70px; height:70px; object-fit:cover; cursor:pointer; border-radius:6px; box-shadow:0 4px 10px rgba(0,0,0,0.2);}
 </style>
-
 </head>
 
-<body class="h-screen flex bg-gray-100">
+<body class="bg-gray-100 dark:bg-[#020617] text-gray-800 dark:text-gray-200 h-screen flex">
 
-<!-- ROOM PANEL -->
-
-<div class="w-64 bg-white border-r p-4 flex flex-col">
-
+<!-- LEFT PANEL -->
+<div class="w-64 bg-white dark:bg-[#0f172a] border-r border-gray-200 dark:border-gray-800 p-4 flex flex-col">
 <h2 class="font-bold mb-3">Rooms</h2>
-
 <div class="flex gap-2 mb-4">
-
-<input id="roomInput" class="border rounded px-2 py-1 w-full">
-
-<button onclick="createRoom()" class="bg-purple-600 text-white px-3 rounded">
-+
-</button>
-
+<input id="roomInput" class="border rounded px-2 py-1 w-full dark:bg-gray-800">
+<button onclick="createRoom()" class="bg-purple-600 text-white px-3 rounded">+</button>
 </div>
-
 <div id="roomList" class="space-y-2 flex-1"></div>
-
 <h2 class="font-bold mt-4">Users</h2>
-
 <div id="userList" class="text-sm space-y-1"></div>
-
 </div>
 
 <!-- MAIN -->
-
 <div class="flex-1 flex flex-col">
-
 <!-- HEADER -->
-
-<div class="bg-white border-b p-4 flex justify-between">
-
+<div class="bg-white dark:bg-[#020617] border-b border-gray-200 dark:border-gray-800 p-4 flex justify-between">
 <div>
-
-<input id="nickname" placeholder="Nickname"
-class="border rounded px-2 py-1">
-
-<button onclick="joinRoom()"
-class="bg-blue-600 text-white px-4 py-1 rounded ml-2">
-Join
-</button>
-
+<input id="nickname" placeholder="Nickname" class="border rounded px-2 py-1 dark:bg-gray-800">
+<button onclick="joinRoom()" class="bg-blue-600 text-white px-4 py-1 rounded ml-2">Join</button>
 </div>
-
-<div class="flex gap-2">
-
-<button onclick="toggleDark()"
-class="bg-gray-800 text-white px-3 py-1 rounded">
-🌙
-</button>
-
-<button onclick="toggleGif()"
-class="bg-pink-500 text-white px-3 py-1 rounded">
-GIF
-</button>
-
-</div>
-
+<button onclick="toggleDark()" class="bg-gray-800 text-white px-3 py-1 rounded">🌙</button>
 </div>
 
 <!-- CHAT -->
-
-<div id="chatContainer"
-class="flex-1 overflow-y-auto p-6 space-y-4 custom-scroll"></div>
-
-<!-- SUGGESTION -->
-
-<div id="suggestions"
-class="px-6 text-sm text-gray-500"></div>
+<div id="chatContainer" class="flex-1 overflow-y-auto p-6 space-y-4 custom-scroll bg-white dark:bg-[#020617]"></div>
 
 <!-- INPUT -->
-
-<div class="bg-white border-t p-4 flex gap-2 relative">
-
+<div class="bg-white dark:bg-[#020617] border-t border-gray-200 dark:border-gray-800 p-4 flex gap-2 relative">
 <input type="file" id="imageInput" class="hidden">
+<button onclick="imageInput.click()" class="bg-yellow-400 px-3 py-2 rounded">📷</button>
+<button onclick="togglePanel('emoji')" class="bg-pink-500 text-white px-3 py-2 rounded">😊</button>
 
-<button onclick="imageInput.click()"
-class="bg-yellow-400 px-3 py-2 rounded">
-📷
-</button>
+<input id="messageInput" class="flex-1 border rounded px-4 py-2 dark:bg-gray-800" placeholder="Message...">
+<button onclick="sendMessage()" class="bg-blue-600 text-white px-6 py-2 rounded">Send</button>
 
-<button onclick="toggleEmoji()"
-class="bg-pink-500 text-white px-3 py-2 rounded">
-😊
-</button>
-
-<input id="messageInput"
-class="flex-1 border rounded px-4 py-2"
-placeholder="Message...">
-
-<button onclick="sendMessage()"
-class="bg-blue-600 text-white px-6 py-2 rounded">
-Send
-</button>
-
-<div id="emojiPanel"
-class="absolute bottom-16 left-10 hidden"></div>
-
+<!-- PANEL CONTAINER -->
+<div id="panelContainer">
+    <div id="panelTabs">
+        <button id="tabEmoji" class="active" onclick="switchTab('emoji')">Emoji</button>
+        <button id="tabGif" onclick="switchTab('gif')">GIF</button>
+    </div>
+    <div id="emojiPanel"></div>
+    <div id="gifPanel">
+        <input id="gifSearch" type="text" placeholder="Search GIF..." class="border px-2 py-1 w-full mb-2 rounded">
+        <div id="gifResults" style="display:flex;flex-wrap:wrap;gap:5px;"></div>
+    </div>
 </div>
 
-<!-- GIF SEARCH -->
-
-<div id="gifPanel"
-class="hidden absolute bottom-20 left-72 bg-white p-4 shadow-xl rounded w-96">
-
-<input id="gifSearch"
-placeholder="Search GIF..."
-class="border w-full px-2 py-1 mb-3">
-
-<div id="gifResults"
-class="grid grid-cols-3 gap-2"></div>
-
 </div>
-
 </div>
 
 <script>
-
-const socket=io()
-
-let currentRoom=""
-let currentUser=""
-
-let historyMessages=[]
-
-/* DARK MODE */
-
-function toggleDark(){
-
-document.body.classList.toggle("dark")
-
-}
+const socket = io();
+let currentRoom = "";
+let currentUser = "";
+let historyMessages = [];
 
 /* ROOM */
-
-function createRoom(){
-
-const room=roomInput.value.trim()
-
-socket.emit("createRoom",room)
-
-}
-
-socket.on("roomList",(rooms)=>{
-
-roomList.innerHTML=""
-
-rooms.forEach(r=>{
-
-const div=document.createElement("div")
-
-div.className="p-2 bg-gray-200 rounded cursor-pointer"
-
-div.innerText=r
-
-div.onclick=()=>{
-
-currentRoom=r
-joinRoom()
-
-}
-
-roomList.appendChild(div)
-
-})
-
-})
+function createRoom(){ const room=document.getElementById("roomInput").value.trim(); socket.emit("createRoom",room);}
+socket.on("roomList",(rooms)=>{ const list=document.getElementById("roomList"); list.innerHTML=""; rooms.forEach(r=>{ const div=document.createElement("div"); div.className="p-2 bg-gray-200 dark:bg-gray-700 rounded cursor-pointer"; div.innerText=r; div.onclick=()=>{currentRoom=r; joinRoom();}; list.appendChild(div); });});
 
 /* JOIN */
-
-function joinRoom(){
-
-const nickname=nickname.value.trim()
-
-if(!nickname||!currentRoom) return
-
-currentUser=nickname
-
-socket.emit("joinRoom",{room:currentRoom,nickname})
-
-}
-
-socket.on("chatHistory",(msgs)=>{
-
-historyMessages=msgs
-
-renderAll()
-
-})
+function joinRoom(){ const nickname=document.getElementById("nickname").value.trim(); if(!nickname||!currentRoom){alert("enter nickname & room"); return;} currentUser=nickname; socket.emit("joinRoom",{room: currentRoom, nickname});}
+socket.on("chatHistory",(msgs)=>{ historyMessages=msgs; renderAll();});
 
 /* USERS */
-
-socket.on("userList",(users)=>{
-
-userList.innerHTML=""
-
-users.forEach(u=>{
-
-const div=document.createElement("div")
-
-div.innerText="🟢 "+u
-
-userList.appendChild(div)
-
-})
-
-})
+socket.on("userList",(users)=>{ const list=document.getElementById("userList"); list.innerHTML=""; users.forEach(u=>{ const div=document.createElement("div"); div.innerText="🟢 "+u; list.appendChild(div);});});
 
 /* SEND */
-
-function sendMessage(){
-
-const text=messageInput.value.trim()
-
-if(!text) return
-
-socket.emit("chatMessage",{text})
-
-messageInput.value=""
-
-}
-
-messageInput.addEventListener("keypress",(e)=>{
-
-if(e.key==="Enter") sendMessage()
-
-})
+function sendMessage(){ const text=document.getElementById("messageInput").value.trim(); if(!text) return; socket.emit("chatMessage",{text}); messageInput.value="";}
+messageInput.addEventListener("keypress",(e)=>{if(e.key==="Enter") sendMessage();});
+messageInput.addEventListener("input",()=>{socket.emit("typing");});
 
 /* IMAGE */
-
-imageInput.addEventListener("change",function(){
-
-const file=this.files[0]
-
-const reader=new FileReader()
-
-reader.onload=(e)=>{
-
-socket.emit("chatMessage",{image:e.target.result})
-
-}
-
-reader.readAsDataURL(file)
-
-})
-
-/* GIF SEARCH */
-
-function toggleGif(){
-
-gifPanel.classList.toggle("hidden")
-
-}
-
-gifSearch.addEventListener("input",async()=>{
-
-const q=gifSearch.value
-
-if(q.length<2) return
-
-const res=await fetch(
-`https://g.tenor.com/v1/search?q=${q}&key=LIVDSRZULELA&limit=9`
-)
-
-const data=await res.json()
-
-gifResults.innerHTML=""
-
-data.results.forEach(g=>{
-
-const img=document.createElement("img")
-
-img.src=g.media[0].gif.url
-
-img.className="cursor-pointer rounded"
-
-img.onclick=()=>{
-
-socket.emit("chatMessage",{gif:g.media[0].gif.url})
-
-gifPanel.classList.add("hidden")
-
-}
-
-gifResults.appendChild(img)
-
-})
-
-})
+imageInput.addEventListener("change",function(){ const file=this.files[0]; const reader=new FileReader(); reader.onload=(e)=>{ socket.emit("chatMessage",{image:e.target.result}); }; reader.readAsDataURL(file);});
 
 /* RECEIVE */
-
-socket.on("chatMessage",(msg)=>{
-
-historyMessages.push(msg)
-
-renderMessage(msg)
-
-})
+socket.on("chatMessage",(msg)=>{ historyMessages.push(msg); renderMessage(msg);});
+socket.on("messageDeleted",(id)=>{ historyMessages=historyMessages.filter(m=>m.id!==id); renderAll();});
 
 /* RENDER */
-
-function renderAll(){
-
-chatContainer.innerHTML=""
-
-historyMessages.forEach(m=>renderMessage(m))
-
-}
-
+function renderAll(){ chatContainer.innerHTML=""; historyMessages.forEach(m=>renderMessage(m)); }
 function renderMessage(msg){
-
-if(msg.system){
-
-const sys=document.createElement("div")
-
-sys.className="text-center text-gray-400"
-
-sys.innerText=msg.text
-
-chatContainer.appendChild(sys)
-
-return
-
+    if(msg.system){ const sys=document.createElement("div"); sys.className="text-center text-gray-400"; sys.innerText=msg.text; chatContainer.appendChild(sys); return; }
+    const isMe = msg.user===currentUser;
+    const div=document.createElement("div");
+    div.className=`flex ${isMe?"justify-end":""} gap-2 message`;
+    div.innerHTML=`
+    <div>
+    <div class="text-xs">${msg.user}</div>
+    <div class="px-4 py-2 rounded-xl shadow ${isMe?"bg-blue-600 text-white":"bg-gray-200 dark:bg-gray-700"}">
+    ${msg.text||""}
+    ${msg.image?`<img src="${msg.image}" class="mt-2 rounded max-w-xs">`:""}
+    ${msg.gif?`<img src="${msg.gif}" class="mt-2 rounded max-w-xs">`:""}
+    </div>
+    <div class="text-[10px] text-gray-400">${msg.time}</div>
+    </div>
+    ${isMe?`<button onclick="deleteMessage('${msg.id}')">🗑</button>`:""}
+    `;
+    chatContainer.appendChild(div);
+    chatContainer.scrollTo({top:chatContainer.scrollHeight,behavior:"smooth"});
 }
+function deleteMessage(id){socket.emit("deleteMessage",id);}
 
-const div=document.createElement("div")
+/* EMOJI + GIF PANEL */
+const panelContainer = document.getElementById("panelContainer");
+const emojiPanel = document.getElementById("emojiPanel");
+const gifPanel = document.getElementById("gifPanel");
+function togglePanel(type){ panelContainer.style.display = panelContainer.style.display==="block"?"none":"block"; switchTab(type);}
+function switchTab(type){ document.getElementById("tabEmoji").classList.remove("active"); document.getElementById("tabGif").classList.remove("active"); if(type==="emoji"){ document.getElementById("tabEmoji").classList.add("active"); emojiPanel.style.display="flex"; gifPanel.style.display="none"; } else{ document.getElementById("tabGif").classList.add("active"); emojiPanel.style.display="none"; gifPanel.style.display="flex"; }}
 
-div.className="message"
+/* EMOJI PICKER */
+if(emojiPanel.innerHTML===""){ const picker = new EmojiMart.Picker({ onEmojiSelect:(emoji)=>{ messageInput.value += emoji.native; } }); emojiPanel.appendChild(picker);}
 
-div.innerHTML=`
+/* GIF SEARCH WITHOUT API */
+const gifSearch = document.getElementById("gifSearch");
+const gifResults = document.getElementById("gifResults");
 
-<div class="text-xs">${msg.user}</div>
+// gif library
+const GIF_LIBRARY = {
+    cat: [
+        "https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif",
+        "https://media.giphy.com/media/mlvseq9yvZhba/giphy.gif",
+        "https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif",
+        "https://media.giphy.com/media/12PA1eI8FBqEBa/giphy.gif",
+        "https://media.giphy.com/media/13borq7Zo2kulO/giphy.gif",
+        "https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif",
+        "https://media.giphy.com/media/3o7TKPj9G4hZqj9o8M/giphy.gif",
+        "https://media.giphy.com/media/6brH8nqIxL58s/giphy.gif",
+        "https://media.giphy.com/media/l0HlNQ03J5JxX6lva/giphy.gif",
+        "https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif"
+    ],
+    dog: [
+        "https://media.giphy.com/media/3o6ZtaO9BZHcOjmErm/giphy.gif",
+        "https://media.giphy.com/media/1BdIP2h28f8z2/giphy.gif",
+        "https://media.giphy.com/media/13borq7Zo2kulO/giphy.gif",
+        "https://media.giphy.com/media/xT9IgDEI1iZyb2wqo8/giphy.gif",
+        "https://media.giphy.com/media/l0Exk8EUzSLsrErEQ/giphy.gif",
+        "https://media.giphy.com/media/3o6ZsWqKZfM45pfpAA/giphy.gif",
+        "https://media.giphy.com/media/3oKIPwoeGErMmaI43C/giphy.gif",
+        "https://media.giphy.com/media/l0HlOvJ7yaacpuSas/giphy.gif"
+    ],
+    hello: [
+        "https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif",
+        "https://media.giphy.com/media/l0HlNQ03J5JxX6lva/giphy.gif",
+        "https://media.giphy.com/media/3o7TKPj9G4hZqj9o8M/giphy.gif"
+    ],
+    dance: [
+        "https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif",
+        "https://media.giphy.com/media/26gssIytJvy1b1THO/giphy.gif",
+        "https://media.giphy.com/media/3o7TKuC1ZbD2y4qX7C/giphy.gif"
+    ],
+    laugh: [
+        "https://media.giphy.com/media/5GoVLqeAOo6PK/giphy.gif",
+        "https://media.giphy.com/media/l0HlPjezKXG3V3i2w/giphy.gif",
+        "https://media.giphy.com/media/3o7TKuC1ZbD2y4qX7C/giphy.gif"
+    ],
+    love: [
+        "https://media.giphy.com/media/l0HlQ7LRalNzpSzqY/giphy.gif",
+        "https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif",
+        "https://media.giphy.com/media/xT0xeJpnrWC4XWblEk/giphy.gif"
+    ],
+    wow: [
+        "https://media.giphy.com/media/l0HlQ7LRalNzpSzqY/giphy.gif",
+        "https://media.giphy.com/media/3oKIPwoeGErMmaI43C/giphy.gif"
+    ],
+    sad: [
+        "https://media.giphy.com/media/3oEjHS5HGPRJx5lR6U/giphy.gif",
+        "https://media.giphy.com/media/26gsl0h7m0rZk5kXe/giphy.gif"
+    ],
+    angry: [
+        "https://media.giphy.com/media/3oKIPwoeGErMmaI43C/giphy.gif",
+        "https://media.giphy.com/media/l0HlOvJ7yaacpuSas/giphy.gif"
+    ],
+    clap: [
+        "https://media.giphy.com/media/3oEjHCWdU7F4vF0xEQ/giphy.gif",
+        "https://media.giphy.com/media/l0Exk8EUzSLsrErEQ/giphy.gif"
+    ]
+};
 
-<div class="bg-gray-200 px-4 py-2 rounded-xl">
+gifSearch.addEventListener("keypress",(e)=>{
+    if(e.key==="Enter"){
+        const query = gifSearch.value.trim().toLowerCase();
+        gifResults.innerHTML="";
+        const gifs = GIF_LIBRARY[query];
+        if(!gifs || gifs.length===0){
+            gifResults.innerHTML="<p>No GIFs found</p>";
+            return;
+        }
+        gifs.forEach(url=>{
+            const img = document.createElement("img");
+            img.src = url;
+            img.onclick=()=>{ socket.emit("chatMessage",{gif:url}); panelContainer.style.display="none"; };
+            gifResults.appendChild(img);
+        });
+    }
+});
 
-${msg.text||""}
-
-${msg.image?`<img src="${msg.image}" class="mt-2 max-w-xs rounded">`:""}
-
-${msg.gif?`<img src="${msg.gif}" class="mt-2 max-w-xs rounded">`:""}
-
-</div>
-
-<div class="text-[10px] text-gray-400">${msg.time}</div>
-
-`
-
-chatContainer.appendChild(div)
-
-chatContainer.scrollTop=chatContainer.scrollHeight
-
-}
-
-/* EMOJI */
-
-function toggleEmoji(){
-
-emojiPanel.classList.toggle("hidden")
-
-if(emojiPanel.innerHTML===""){
-
-const picker=new EmojiMart.Picker({
-
-onEmojiSelect:(emoji)=>{
-
-messageInput.value+=emoji.native
-
-}
-
-})
-
-emojiPanel.appendChild(picker)
-
-}
-
-}
-
-/* MESSAGE SUGGESTIONS */
-
-const suggestionsList=[
-"Hello 👋",
-"How are you?",
-"Good morning ☀️",
-"Nice to meet you!",
-"Let's start 🚀"
-]
-
-messageInput.addEventListener("input",()=>{
-
-const text=messageInput.value.toLowerCase()
-
-const match=suggestionsList.filter(s=>s.toLowerCase().includes(text))
-
-suggestions.innerHTML=match.map(m=>
-`<span class="cursor-pointer mr-2">${m}</span>`
-).join("")
-
-})
-
+/* DARK */
+function toggleDark(){document.documentElement.classList.toggle("dark");}
 </script>
 
 </body>
