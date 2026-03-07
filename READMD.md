@@ -2,6 +2,7 @@
 - Use Socket.io Module
 - Connect Socket.io
 - Implementation chat function with that.
+- emotion and gif file
 
 ## Function
 - Chat available
